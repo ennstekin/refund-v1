@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model AuthToken {
+  id              String   @id
+  merchantId      String
+  authorizedAppId String?  @unique
+  salesChannelId  String?
+  type            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deleted         Boolean  @default(false)
+
+  accessToken     String
+  tokenType       String
+  expiresIn       Int
+  expireDate      DateTime
+  refreshToken    String
+  scope           String?
+}
+
+model RefundRequest {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  orderNumber     String
+  merchantId      String
+  status          String   // pending, processing, completed, rejected
+  reason          String?  // damaged_product, wrong_size, changed_mind, defective, not_as_described, other
+  reasonNote      String?  // Ek açıklama
+  trackingNumber  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  notes           RefundNote[]
+  timeline        RefundTimeline[]
+}
+
+model RefundNote {
+  id              String   @id @default(cuid())
+  refundRequestId String
+  content         String
+  createdBy       String   // user who created the note
+  createdAt       DateTime @default(now())
+
+  refundRequest   RefundRequest @relation(fields: [refundRequestId], references: [id], onDelete: Cascade)
+}
+
+model RefundTimeline {
+  id              String   @id @default(cuid())
+  refundRequestId String
+  eventType       String   // created, status_changed, note_added, tracking_updated, etc.
+  eventData       String?  // JSON data for the event
+  description     String   // Human readable description
+  createdBy       String?  // Who triggered this event
+  createdAt       DateTime @default(now())
+
+  refundRequest   RefundRequest @relation(fields: [refundRequestId], references: [id], onDelete: Cascade)
+}
+
+model Merchant {
+  id              String   @id
+  authorizedAppId String   @unique
+  storeName       String?
+  email           String?
+  portalUrl       String?  // Custom portal URL (e.g., iade.magaza.com)
+  portalEnabled   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

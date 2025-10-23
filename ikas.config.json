@@ -1,0 +1,14 @@
+{
+  "portMapping": {
+    "default": 3001
+  },
+  "oauthRedirectPath": "/api/oauth/callback/ikas",
+  "runCommand": "pnpm run dev",
+  "actions": [
+    {
+      "label": "İade Takip",
+      "url": "/refunds",
+      "description": "İade taleplerini görüntüle ve yönet"
+    }
+  ]
+}
