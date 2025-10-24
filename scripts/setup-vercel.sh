@@ -41,7 +41,7 @@ echo "--------------------------------------------"
 # Link project if not already linked
 if [ ! -f ".vercel/project.json" ]; then
     echo "This will link your local project to Vercel."
-    vercel link
+    vercel link --yes
 else
     echo -e "${GREEN}✓ Project already linked to Vercel${NC}"
 fi

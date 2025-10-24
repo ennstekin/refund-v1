@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
 import { ApiResponseType } from '../globals/constants';
+import { buildApiUrl } from './api-base-url';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
-  return axios.post<ApiResponseType<T>>(url, data, {
+  return axios.post<ApiResponseType<T>>(buildApiUrl(url), data, {
     headers: token
       ? {
           Authorization: `JWT ${token}`,
@@ -13,7 +14,7 @@ export async function makePostRequest<T>({ url, data, token }: { url: string; da
 }
 
 export async function makeGetRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
-  return axios.get<ApiResponseType<T>>(url, {
+  return axios.get<ApiResponseType<T>>(buildApiUrl(url), {
     params: data,
     headers: token
       ? {
@@ -24,7 +25,7 @@ export async function makeGetRequest<T>({ url, data, token }: { url: string; dat
 }
 
 export async function makePatchRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
-  return axios.patch<ApiResponseType<T>>(url, data, {
+  return axios.patch<ApiResponseType<T>>(buildApiUrl(url), data, {
     headers: token
       ? {
           Authorization: `JWT ${token}`,
