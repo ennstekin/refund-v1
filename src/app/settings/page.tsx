@@ -213,7 +213,7 @@ export default function SettingsPage() {
 
             {/* Current Portal URL Display */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">Aktif Portal URL'iniz</h4>
+              <h4 className="font-medium text-blue-900 mb-2">Aktif Portal URL&apos;iniz</h4>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-sm bg-white px-3 py-2 rounded border border-blue-200 text-blue-900">
                   {getPortalFullUrl()}
@@ -227,7 +227,7 @@ export default function SettingsPage() {
                 </button>
               </div>
               <p className="mt-2 text-sm text-blue-800">
-                Bu URL'i müşterilerinizle paylaşabilir, siparişlerinizin email'ine ekleyebilir veya web sitenize
+                Bu URL&apos;i müşterilerinizle paylaşabilir, siparişlerinizin email&apos;ine ekleyebilir veya web sitenize
                 koyabilirsiniz.
               </p>
             </div>
