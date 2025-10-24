@@ -1,6 +1,7 @@
 import { config } from '@/globals/config';
 import { getSession, setSession } from '@/lib/session';
 import { validateRequest } from '@/lib/validation';
+import { prisma } from '@/lib/prisma';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import moment from 'moment';
 import { getIkas, getRedirectUri } from '@/helpers/api-helpers';
@@ -122,6 +123,25 @@ export async function GET(request: NextRequest) {
 
     // Store the token for future use
     await AuthTokenManager.put(token);
+
+    // Create or update Merchant record
+    await prisma.merchant.upsert({
+      where: { id: merchantId },
+      update: {
+        authorizedAppId,
+        storeName: merchantResponse.data.getMerchant.storeName || null,
+        email: merchantResponse.data.getMerchant.email || null,
+        portalEnabled: true,
+        updatedAt: new Date(),
+      },
+      create: {
+        id: merchantId,
+        authorizedAppId,
+        storeName: merchantResponse.data.getMerchant.storeName || null,
+        email: merchantResponse.data.getMerchant.email || null,
+        portalEnabled: true,
+      },
+    });
 
     // Update session with new merchant and app IDs, clear state, and set expiration
     session.expiresAt = new Date(Date.now() + 3600 * 1000);

@@ -102,7 +102,15 @@ export default function SettingsPage() {
     if (portalUrl && portalUrl.trim()) {
       return `https://${portalUrl.trim()}`;
     }
-    return `${window.location.origin}/portal`;
+
+    // Portal is deployed separately on Vercel
+    const PORTAL_BASE_URL = process.env.NEXT_PUBLIC_PORTAL_URL || 'https://refund-portal.vercel.app';
+
+    // Include merchant ID in default portal URL for multi-tenant support
+    if (settings?.id) {
+      return `${PORTAL_BASE_URL}/portal?storeId=${settings.id}`;
+    }
+    return `${PORTAL_BASE_URL}/portal`;
   };
 
   const copyToClipboard = () => {

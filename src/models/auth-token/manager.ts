@@ -30,6 +30,26 @@ export class AuthTokenManager {
    * @returns The AuthToken if found, otherwise undefined.
    */
   static async get(authorizedAppId: string): Promise<AuthToken | undefined> {
+    // Development mode - return mock token
+    if (process.env.DEV_MODE === 'true' && authorizedAppId === process.env.DEV_AUTHORIZED_APP_ID) {
+      return {
+        id: 'mock-token-id',
+        merchantId: process.env.DEV_MERCHANT_ID || '',
+        authorizedAppId: authorizedAppId,
+        salesChannelId: null,
+        type: 'app',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        deleted: false,
+        accessToken: 'mock_access_token_for_development',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        expireDate: new Date(Date.now() + 3600000).toISOString(),
+        refreshToken: 'mock_refresh_token',
+        scope: 'admin',
+      };
+    }
+
     const token = await prisma.authToken.findUnique({
       where: { authorizedAppId },
     });

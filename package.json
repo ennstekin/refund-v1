@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "build:production": "prisma generate && DISABLE_ESLINT=true next build",
+    "build:production": "prisma migrate deploy && prisma generate && DISABLE_ESLINT=true next build",
     "build:ikas": "prisma generate && NEXT_PUBLIC_API_BASE_URL=$VERCEL_URL next build -c next.config.ikas.js",
-    "build:vercel": "prisma generate && next build",
+    "build:vercel": "prisma migrate deploy && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "codegen": "graphql-codegen --config src/lib/ikas-client/codegen.ts",

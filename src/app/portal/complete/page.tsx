@@ -146,18 +146,34 @@ export default function RefundCompletePage() {
               <span className="font-medium">Sipariş No:</span> {orderData.orderNumber}
             </p>
             {refundId && (
-              <p className="text-sm text-gray-600 mt-1">
-                <span className="font-medium">İade Takip No:</span> {refundId.slice(0, 8).toUpperCase()}
-              </p>
+              <div>
+                <p className="text-sm text-gray-600 mt-1">
+                  <span className="font-medium">İade Takip No:</span>{' '}
+                  <span className="font-mono">{refundId}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Bu numarayı kullanarak iade durumunuzu takip edebilirsiniz
+                </p>
+              </div>
             )}
           </div>
 
-          <button
-            onClick={() => router.push('/portal')}
-            className="bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            Yeni İade Talebi Oluştur
-          </button>
+          <div className="flex flex-col gap-3">
+            {refundId && (
+              <button
+                onClick={() => router.push(`/portal/track/${refundId}`)}
+                className="bg-green-600 text-white py-3 px-8 rounded-lg hover:bg-green-700 transition font-medium"
+              >
+                İade Durumunu Görüntüle
+              </button>
+            )}
+            <button
+              onClick={() => router.push('/portal')}
+              className="bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              Yeni İade Talebi Oluştur
+            </button>
+          </div>
         </div>
       </div>
     );

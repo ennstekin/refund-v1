@@ -43,7 +43,12 @@ export default function RefundPortalPage() {
       }
     } catch (err: any) {
       console.error('Verification error:', err);
-      if (err.response?.status === 404) {
+      if (err.response?.status === 409 && err.response?.data?.refundExists) {
+        // Refund already exists, redirect to tracking page
+        const refundId = err.response.data.refundId;
+        router.push(`/portal/track/${refundId}`);
+        return;
+      } else if (err.response?.status === 404) {
         setError('Sipariş bulunamadı. Lütfen sipariş numaranızı ve email adresinizi kontrol edin.');
       } else if (err.response?.status === 400) {
         setError(err.response.data.error || 'Email adresi sipariş ile eşleşmiyor');

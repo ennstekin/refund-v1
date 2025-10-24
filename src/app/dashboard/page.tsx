@@ -9,9 +9,12 @@ import Link from 'next/link';
 export default function DashboardPage() {
   const [token, setToken] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
+  const [portalUrl, setPortalUrl] = useState('/portal');
 
   useEffect(() => {
     AppBridgeHelper.closeLoader();
+    // Set portal URL on client side to avoid hydration mismatch
+    setPortalUrl(`${window.location.origin}/portal`);
   }, []);
 
   const fetchStoreName = useCallback(async (currentToken: string) => {
@@ -81,7 +84,7 @@ export default function DashboardPage() {
         </Link>
 
         <a
-          href={`${typeof window !== 'undefined' ? window.location.origin : ''}/portal`}
+          href={portalUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition"

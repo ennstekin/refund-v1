@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
         trackingNumber: trackingNumber || null,
         reason: reason || null,
         reasonNote: reasonNote || null,
+        source: 'dashboard', // Dashboard'dan manuel oluşturulan iade
       },
     });
 
