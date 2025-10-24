@@ -20,8 +20,8 @@ export const GET_AUTHORIZED_APP = gql`
 `;
 
 export const LIST_ORDERS = gql`
-  query listOrder($pagination: PaginationInput, $sort: String, $search: String) {
-    listOrder(pagination: $pagination, sort: $sort, search: $search) {
+  query listOrder($pagination: PaginationInput, $sort: String, $search: String, $orderNumber: StringFilterInput) {
+    listOrder(pagination: $pagination, sort: $sort, search: $search, orderNumber: $orderNumber) {
       data {
         id
         orderNumber

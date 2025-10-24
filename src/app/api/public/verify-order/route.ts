@@ -299,11 +299,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Search for order in ikas
+    // Search for order in ikas using exact orderNumber match
     const ikasClient = getIkas(authToken);
     const orderResponse = await ikasClient.queries.listOrder({
       pagination: { limit: 1 },
-      search: orderNumber.trim(),
+      orderNumber: { eq: orderNumber.trim() },
     });
 
     if (!orderResponse.isSuccess || !orderResponse.data?.listOrder?.data?.[0]) {

@@ -58,6 +58,7 @@ export type ListOrderQueryVariables = {
   pagination?: PaginationInput;
   sort?: string;
   search?: string;
+  orderNumber?: StringFilterInput;
 }
 
 export type ListOrderQueryData = {
@@ -321,8 +322,8 @@ export class GeneratedQueries {
 
   async listOrder(variables: ListOrderQueryVariables): Promise<APIResult<Partial<ListOrderQuery>>> {
     const query = `
-  query listOrder($pagination: PaginationInput, $sort: String, $search: String) {
-    listOrder(pagination: $pagination, sort: $sort, search: $search) {
+  query listOrder($pagination: PaginationInput, $sort: String, $search: String, $orderNumber: StringFilterInput) {
+    listOrder(pagination: $pagination, sort: $sort, search: $search, orderNumber: $orderNumber) {
       data {
         id
         orderNumber
