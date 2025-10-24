@@ -1,15 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 
-export default function RefundPortalPage() {
+function RefundPortalContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [orderNumber, setOrderNumber] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get store identifier from URL query params
+    const storeNameParam = searchParams.get('storeName');
+    const storeIdParam = searchParams.get('storeId');
+
+    setStoreName(storeNameParam);
+    setStoreId(storeIdParam);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +42,16 @@ export default function RefundPortalPage() {
       setLoading(true);
       setError(null);
 
+      // Build query params for store identification
+      const queryParams = new URLSearchParams();
+      if (storeName) queryParams.set('storeName', storeName);
+      if (storeId) queryParams.set('storeId', storeId);
+
+      const queryString = queryParams.toString();
+      const url = `/api/public/verify-order${queryString ? `?${queryString}` : ''}`;
+
       // Verify order
-      const response = await axios.post('/api/public/verify-order', {
+      const response = await axios.post(url, {
         orderNumber: orderNumber.trim(),
         email: email.trim().toLowerCase(),
       });
@@ -153,5 +173,13 @@ export default function RefundPortalPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RefundPortalPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center"><div className="text-gray-600">Yükleniyor...</div></div>}>
+      <RefundPortalContent />
+    </Suspense>
   );
 }
