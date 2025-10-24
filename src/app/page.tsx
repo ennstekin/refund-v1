@@ -5,17 +5,17 @@ import { useRouter } from 'next/navigation';
 import Loading from '@/components/Loading';
 
 /**
- * Home page - Routes to appropriate destination based on deployment
+ * Home page - ikas Dashboard Entry Point
  *
- * Vercel Deployment: Redirects to /portal (public customer portal)
- * ikas App: Will use /dashboard or /refunds as entry point
+ * When accessed from ikas admin panel, shows the dashboard
+ * Customer portal is accessed via /portal route
  */
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to portal for public access
-    router.replace('/portal');
+    // Redirect to dashboard for ikas admin access
+    router.replace('/dashboard');
   }, [router]);
 
   return <Loading />;
