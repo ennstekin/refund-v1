@@ -77,3 +77,6 @@ WARP.md
 config.toml
 opencode.json
 # END Ruler Generated Files
+
+# Vercel environment files (contain sensitive data)
+.env.vercel.production

@@ -2,9 +2,15 @@
 
 ikas e-ticaret platformu için geliştirilmiş kapsamlı iade yönetim ve self-service portal uygulaması. Next.js 15 App Router, OAuth, Prisma, GraphQL (codegen), Tailwind CSS ile modern ve güvenli bir altyapı üzerine kurulmuştur.
 
-> **📚 Detaylı Dokümantasyon:** Proje geliştirme süreci, teknik detaylar ve ileriye dönük öneriler için [.docs/DEVELOPMENT_LOG.md](.docs/DEVELOPMENT_LOG.md) dosyasına bakın.
->
-> **📝 Sürüm Notları:** Değişiklik geçmişi ve planlanan özellikler için [CHANGELOG.md](CHANGELOG.md) dosyasına bakın.
+## 📖 Dokümantasyon
+
+| Dosya | Açıklama |
+|-------|----------|
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Sistem mimarisi, veri akışları, teknoloji stack ve tasarım kararları |
+| **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** | Production deployment adımları, environment setup ve konfigürasyon |
+| **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** | Karşılaşılan sorunlar, çözümler ve debugging ipuçları |
+| **[CHANGELOG.md](./CHANGELOG.md)** | Değişiklik geçmişi ve planlanan özellikler |
+| **[.docs/DEVELOPMENT_LOG.md](.docs/DEVELOPMENT_LOG.md)** | Detaylı geliştirme süreci notları |
 
 ## ✨ İade Yönetim Sistemi Özellikleri
 
@@ -114,6 +120,23 @@ src/
 - RefundTimeline     # İade event history
 - Merchant           # Mağaza ayarları (portalUrl, portalEnabled)
 ```
+
+## 🌐 Production
+
+**Live URL**: https://refund-v1.vercel.app
+
+**Deployment Platform**: Vercel (Serverless)
+**Database**: Neon PostgreSQL
+
+**Deployment Status**: ✅ Aktif ve çalışıyor
+
+> **📚 Deployment Rehberi**: Production ortamına deploy etmek için [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) dosyasına bakın.
+
+### Quick Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/refund-v1)
+
+---
 
 ## 🛠️ Setup
 
