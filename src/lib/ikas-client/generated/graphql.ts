@@ -1,5 +1,13 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
+// Enum type aliases (codegen doesn't generate enums, using string for now)
+export type OrderStatusEnum = string;
+export type OrderPaymentStatusEnum = string;
+export type OrderPackageStatusEnum = string;
+export type OrderPackageFulfillStatusEnum = string;
+export type OrderLineItemStatusEnum = string;
+export type RefundStatusEnum = string;
+
 export type DateFilterInput = {
   eq?: number;
   gt?: number;

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
     }
 
-    // Calculate date 90 days ago
+    // Calculate date 90 days ago (timestamp in milliseconds)
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         limit: 100,
       },
       orderedAt: {
-        gte: ninetyDaysAgo.toISOString(),
+        gte: ninetyDaysAgo.getTime(), // Convert to timestamp (number)
       },
     });
 

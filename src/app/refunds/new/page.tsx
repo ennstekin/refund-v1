@@ -60,8 +60,9 @@ export default function NewRefundPage() {
       const res = await ApiRequests.ikas.getOrders(token, searchQuery);
 
       if (res.status === 200 && res.data?.data) {
-        setSearchResults(res.data.data as Order[]);
-        if (res.data.data.length === 0) {
+        const orders = res.data.data as Order[];
+        setSearchResults(orders);
+        if (orders.length === 0) {
           setError('Sipariş bulunamadı');
         }
       } else {
