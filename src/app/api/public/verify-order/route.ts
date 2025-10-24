@@ -301,31 +301,14 @@ export async function POST(request: NextRequest) {
 
     // Search for order in ikas using exact orderNumber match
     const ikasClient = getIkas(authToken);
-    console.log('[DEBUG] Searching for order:', orderNumber.trim(), 'merchantId:', merchant.id);
-
     const orderResponse = await ikasClient.queries.listOrder({
       pagination: { limit: 1 },
       orderNumber: { eq: orderNumber.trim() },
     });
 
-    console.log('[DEBUG] Order response:', {
-      isSuccess: orderResponse.isSuccess,
-      hasData: !!orderResponse.data,
-      orderCount: orderResponse.data?.listOrder?.data?.length || 0,
-      error: orderResponse.error
-    });
-
     if (!orderResponse.isSuccess || !orderResponse.data?.listOrder?.data?.[0]) {
       return NextResponse.json(
-        {
-          error: 'Sipariş bulunamadı',
-          verified: false,
-          debug: {
-            isSuccess: orderResponse.isSuccess,
-            hasData: !!orderResponse.data,
-            error: orderResponse.error ? String(orderResponse.error) : undefined
-          }
-        },
+        { error: 'Sipariş bulunamadı', verified: false },
         { status: 404 }
       );
     }
