@@ -586,6 +586,102 @@ export default function RefundsPage() {
         </div>
       )}
 
+      {/* KPI Dashboard - Portal refunds */}
+      {activeTab === 'portal' && portalRefunds.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {/* Bekleyen İadeler */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Bekleyen</p>
+                <p className="text-3xl font-bold text-yellow-600">
+                  {portalRefunds.filter(r => r.status === 'pending').length}
+                </p>
+              </div>
+              <div className="bg-yellow-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            {portalRefunds.filter(r => r.status === 'pending').some(r => {
+              const daysSinceCreated = Math.floor((Date.now() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+              return daysSinceCreated > 3;
+            }) && (
+              <div className="mt-3 text-xs text-red-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                SLA Uyarısı: 3 günü aşan iadeler var
+              </div>
+            )}
+          </div>
+
+          {/* İşlenen İadeler */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">İşleniyor</p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {portalRefunds.filter(r => r.status === 'processing').length}
+                </p>
+              </div>
+              <div className="bg-blue-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Tamamlanan İadeler */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Tamamlandı</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {portalRefunds.filter(r => r.status === 'completed').length}
+                </p>
+              </div>
+              <div className="bg-green-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              Tamamlanma oranı: {portalRefunds.length > 0 ? Math.round((portalRefunds.filter(r => r.status === 'completed').length / portalRefunds.length) * 100) : 0}%
+            </p>
+          </div>
+
+          {/* Ortalama İşlem Süresi */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Ort. Süre</p>
+                <p className="text-3xl font-bold text-purple-600">
+                  {(() => {
+                    const completedRefunds = portalRefunds.filter(r => r.status === 'completed');
+                    if (completedRefunds.length === 0) return '0';
+                    const avgDays = completedRefunds.reduce((acc, r) => {
+                      const days = Math.floor((new Date(r.updatedAt).getTime() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                      return acc + days;
+                    }, 0) / completedRefunds.length;
+                    return avgDays.toFixed(1);
+                  })()}
+                  <span className="text-sm font-normal"> gün</span>
+                </p>
+              </div>
+              <div className="bg-purple-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       {((activeTab === 'manual' && refunds.length > 0) || (activeTab === 'ikas' && ikasRefunds.length > 0)) && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">

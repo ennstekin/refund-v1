@@ -30,6 +30,7 @@ type RefundDetail = {
   trackingNumber: string | null;
   reason?: string | null;
   reasonNote?: string | null;
+  images?: string | null;
   createdAt: string;
   updatedAt: string;
   notes: RefundNote[];
@@ -155,16 +156,21 @@ export default function RefundDetailPage() {
 
     try {
       setAddingNote(true);
-      await ApiRequests.refunds.addNote(token, id, {
+      const response = await ApiRequests.refunds.addNote(token, id, {
         content: noteContent,
         createdBy: noteAuthor,
       });
 
-      setNoteContent('');
-      await fetchRefundDetail(token);
-    } catch (err) {
+      if (response.status === 201) {
+        setNoteContent('');
+        setNoteAuthor('');
+        await fetchRefundDetail(token);
+        alert('Not başarıyla eklendi!');
+      }
+    } catch (err: any) {
       console.error('Error adding note:', err);
-      alert('Not eklenirken bir hata oluştu');
+      const errorMessage = err.response?.data?.error || 'Not eklenirken bir hata oluştu';
+      alert(errorMessage);
     } finally {
       setAddingNote(false);
     }
@@ -425,6 +431,42 @@ export default function RefundDetailPage() {
               )}
             </>
           )}
+
+          {/* Product Images */}
+          {refund.images && (() => {
+            try {
+              const images = JSON.parse(refund.images);
+              if (Array.isArray(images) && images.length > 0) {
+                return (
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-xl font-semibold mb-4">Müşteri Fotoğrafları</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {images.map((image: string, index: number) => (
+                        <div key={index} className="relative group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image}
+                            alt={`Ürün fotoğrafı ${index + 1}`}
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition"
+                            onClick={() => window.open(image, '_blank')}
+                          />
+                          <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                            {index + 1}/{images.length}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-3">
+                      Müşteri tarafından yüklenen {images.length} fotoğraf. Tıklayarak büyütebilirsiniz.
+                    </p>
+                  </div>
+                );
+              }
+            } catch (e) {
+              return null;
+            }
+            return null;
+          })()}
         </div>
 
         {/* Right column - Notes */}

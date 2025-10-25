@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         reason,
         reasonNote: reasonNote || null,
         trackingNumber: null,
+        images: images && images.length > 0 ? JSON.stringify(images) : null,
         source: 'portal', // Portal'dan oluşturulan iade
       },
     });

@@ -37,6 +37,7 @@ model RefundRequest {
   reason          String?  // damaged_product, wrong_size, changed_mind, defective, not_as_described, other
   reasonNote      String?  // Ek açıklama
   trackingNumber  String?
+  images          String?  // JSON array of base64 images or URLs
   source          String   @default("dashboard") // dashboard, portal - indicates where the refund was created
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

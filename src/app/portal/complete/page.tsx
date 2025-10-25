@@ -222,6 +222,28 @@ export default function RefundCompletePage() {
             İade talebinizi göndermeden önce aşağıdaki talimatları okuyun
           </p>
 
+          {/* Uploaded Images Preview */}
+          {images.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-3">Yüklenen Fotoğraflar</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {images.map((image, index) => (
+                  <div key={index} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image}
+                      alt={`Ürün fotoğrafı ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                    />
+                    <div className="absolute bottom-1 right-1 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded">
+                      {index + 1}/{images.length}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Order Summary */}
           <div className="bg-gray-50 rounded-lg p-6 mb-8">
             <h3 className="font-semibold text-gray-900 mb-4">Talep Özeti</h3>
@@ -295,16 +317,20 @@ export default function RefundCompletePage() {
                   3
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-1">İade Adresini Kullanın</h4>
+                  <h4 className="font-medium text-gray-900 mb-1">İade Kargo Talimatları</h4>
                   <p className="text-sm text-gray-600 mb-2">
-                    Talebiniz onaylandıktan sonra size email ile kargo etiketi ve iade adresi gönderilecektir. Lütfen
-                    onay emailini bekleyin.
+                    İadenizi aşağıdaki kargo bilgileri ile gönderebilirsiniz:
                   </p>
                   <div className="bg-white border border-blue-200 rounded p-3 text-sm">
-                    <p className="font-medium text-gray-900 mb-1">Kargo İşlemleri</p>
-                    <p className="text-gray-600">
-                      Kargo ücreti iade nedenine göre belirlenir. Hasarlı/kusurlu ürünlerde kargo ücreti tarafımızdan
-                      karşılanır.
+                    <p className="font-medium text-gray-900 mb-2">📦 Kargo Gönderim Bilgileri</p>
+                    <p className="text-gray-700 mb-1">
+                      <span className="font-semibold">İadenizi DHL (MNG) Kargo</span> ile gönderebilirsiniz.
+                    </p>
+                    <p className="text-gray-700 mb-1">
+                      <span className="font-semibold">Kurumsal Kod:</span> <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">663877199</span>
+                    </p>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Adres:</span> Kağıthane / İstanbul depomuza
                     </p>
                   </div>
                 </div>
