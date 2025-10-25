@@ -12,6 +12,16 @@ type RefundData = {
   source: string;
   createdAt: string;
   updatedAt: string;
+  orderNumber: string;
+  orderData?: {
+    customer?: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+    };
+    totalFinalPrice?: number;
+    currencySymbol?: string;
+  } | null;
 };
 
 export default function DashboardPage() {
@@ -195,7 +205,7 @@ export default function DashboardPage() {
       )}
 
       <h2 className="text-xl font-semibold mb-4">Hızlı Erişim</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Link href="/refunds" className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -224,26 +234,87 @@ export default function DashboardPage() {
             </div>
           </div>
         </Link>
-
-        <a
-          href={portalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">Müşteri Portalı</h3>
-              <p className="text-sm text-gray-600">Portal önizlemesi</p>
-            </div>
-          </div>
-        </a>
       </div>
+
+      {/* Recent Activity */}
+      {!loadingStats && refunds.length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold">Son İade Talepleri</h2>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {refunds.slice(0, 5).map((refund) => {
+              const statusConfig = {
+                pending: { label: 'Bekliyor', color: 'bg-yellow-100 text-yellow-800' },
+                processing: { label: 'İşleniyor', color: 'bg-blue-100 text-blue-800' },
+                completed: { label: 'Tamamlandı', color: 'bg-green-100 text-green-800' },
+                rejected: { label: 'Reddedildi', color: 'bg-red-100 text-red-800' },
+              };
+
+              const status = statusConfig[refund.status as keyof typeof statusConfig] || statusConfig.pending;
+              const customerName = refund.orderData?.customer
+                ? `${refund.orderData.customer.firstName || ''} ${refund.orderData.customer.lastName || ''}`.trim()
+                : 'Müşteri';
+
+              return (
+                <Link key={refund.id} href={`/refunds/${refund.id}`} className="block p-4 hover:bg-gray-50 transition">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="font-semibold text-gray-900">Sipariş #{refund.orderNumber}</h3>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${status.color}`}>
+                          {status.label}
+                        </span>
+                        {refund.source === 'portal' && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                            Portal
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          {customerName}
+                        </span>
+                        {refund.orderData?.customer?.email && (
+                          <span className="flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            {refund.orderData.customer.email}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {new Date(refund.createdAt).toLocaleDateString('tr-TR')}
+                        </span>
+                      </div>
+                    </div>
+                    {refund.orderData?.totalFinalPrice && (
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-gray-900">
+                          {refund.orderData.currencySymbol || '₺'}{refund.orderData.totalFinalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          {refunds.length > 5 && (
+            <div className="p-4 border-t border-gray-200 text-center">
+              <Link href="/refunds" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                Tümünü Görüntüle ({refunds.length} iade)
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
