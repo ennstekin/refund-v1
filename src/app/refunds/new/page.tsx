@@ -57,20 +57,27 @@ export default function NewRefundPage() {
     try {
       setSearching(true);
       setError(null);
+      setSearchResults([]);
+
+      console.log('Searching for orders with query:', searchQuery);
       const res = await ApiRequests.ikas.getOrders(token, searchQuery);
+      console.log('Search response:', res);
 
       if (res.status === 200 && res.data?.data) {
         const orders = res.data.data as Order[];
+        console.log('Found orders:', orders.length);
         setSearchResults(orders);
         if (orders.length === 0) {
-          setError('Sipariş bulunamadı');
+          setError('Sipariş bulunamadı. Lütfen sipariş numarasını kontrol edin.');
         }
       } else {
+        console.error('Unexpected response status:', res.status);
         setError('Sipariş arama sırasında bir hata oluştu');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error searching orders:', err);
-      setError('Sipariş arama sırasında bir hata oluştu');
+      const errorMessage = err.response?.data?.error || err.message || 'Sipariş arama sırasında bir hata oluştu';
+      setError(`Hata: ${errorMessage}`);
     } finally {
       setSearching(false);
     }

@@ -61,6 +61,9 @@ export async function GET(request: NextRequest) {
 
     // Fetch orders from ikas
     const ikasClient = getIkas(authToken);
+
+    console.log('Fetching orders with params:', { limit, search, sort: '-orderedAt' });
+
     const ordersResponse = await ikasClient.queries.listOrder({
       pagination: {
         limit,
@@ -69,13 +72,38 @@ export async function GET(request: NextRequest) {
       search, // Search by order number, customer name, email, etc.
     });
 
-    if (!ordersResponse.isSuccess || !ordersResponse.data?.listOrder?.data) {
-      return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+    console.log('iKAS response:', {
+      isSuccess: ordersResponse.isSuccess,
+      hasData: !!ordersResponse.data,
+      dataCount: ordersResponse.data?.listOrder?.data?.length || 0,
+      errors: ordersResponse.errors,
+    });
+
+    if (!ordersResponse.isSuccess) {
+      console.error('iKAS query failed:', ordersResponse.errors);
+      return NextResponse.json({
+        error: 'iKAS siparişleri getiremedi',
+        details: ordersResponse.errors
+      }, { status: 500 });
     }
 
+    if (!ordersResponse.data?.listOrder?.data) {
+      console.log('No orders data in response');
+      return NextResponse.json({ data: [] });
+    }
+
+    console.log(`Found ${ordersResponse.data.listOrder.data.length} orders`);
     return NextResponse.json({ data: ordersResponse.data.listOrder.data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching orders:', error);
-    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data,
+    });
+    return NextResponse.json({
+      error: 'Sipariş listesi alınırken hata oluştu',
+      details: error.message
+    }, { status: 500 });
   }
 }
