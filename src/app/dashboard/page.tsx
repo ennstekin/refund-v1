@@ -220,6 +220,17 @@ export default function DashboardPage() {
   const avgRefundAmount = totalRefunds > 0 ? totalRefundAmount / totalRefunds : 0;
   const currencySymbol = refunds[0]?.orderData?.currencySymbol || '₺';
 
+  // Actual refunded amount (completed refunds from our system + refunded orders from ikas)
+  const completedRefundAmount = refunds
+    .filter(r => r.status === 'completed')
+    .reduce((sum, r) => sum + (r.orderData?.totalFinalPrice || 0), 0);
+
+  const ikasRefundedAmount = ikasRefunds
+    .filter((order: any) => order.orderPaymentStatus === 'REFUNDED')
+    .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
+
+  const totalActualRefundAmount = completedRefundAmount + ikasRefundedAmount;
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">İade Yönetim Sistemi</h1>
@@ -399,15 +410,21 @@ export default function DashboardPage() {
             </h2>
 
             <div className="space-y-4">
-              {/* Total Refund Amount */}
+              {/* Total Actual Refunded Amount */}
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-1">Toplam İade Tutarı</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900">
-                    {currencySymbol}{totalRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="text-3xl font-bold text-green-600">
+                    {currencySymbol}{totalActualRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{totalRefunds} iade talebi</p>
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
+                  <span>Manuel/Portal: {currencySymbol}{completedRefundAmount.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                  <span>İKAS: {currencySymbol}{ikasRefundedAmount.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {refunds.filter(r => r.status === 'completed').length + ikasRefunds.filter((o: any) => o.orderPaymentStatus === 'REFUNDED').length} iade tamamlandı
+                </p>
               </div>
 
               {/* Monthly Comparison */}
