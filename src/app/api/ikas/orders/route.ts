@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching orders with params:', { limit, search, sort: '-orderedAt' });
 
-    // Build query parameters - only include search if it exists
+    // Build query parameters - use orderNumber filter for better search results
     const queryParams: any = {
       pagination: {
         limit,
@@ -72,7 +72,14 @@ export async function GET(request: NextRequest) {
       sort: '-orderedAt',
     };
 
+    // If search query exists, use orderNumber filter with 'eq' operator for exact match
+    // or use 'search' parameter for broader matching including customer info
     if (search) {
+      // Try to match order number exactly first
+      queryParams.orderNumber = {
+        eq: search,
+      };
+      // Also include the search parameter for customer email/name matching
       queryParams.search = search;
     }
 
