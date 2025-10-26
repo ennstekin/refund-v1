@@ -57,20 +57,26 @@ export async function GET(request: NextRequest) {
     // Get params from query
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10', 10);
-    const search = searchParams.get('search') || undefined;
+    const search = searchParams.get('search');
 
     // Fetch orders from ikas
     const ikasClient = getIkas(authToken);
 
     console.log('Fetching orders with params:', { limit, search, sort: '-orderedAt' });
 
-    const ordersResponse = await ikasClient.queries.listOrder({
+    // Build query parameters - only include search if it exists
+    const queryParams: any = {
       pagination: {
         limit,
       },
       sort: '-orderedAt',
-      search, // Search by order number, customer name, email, etc.
-    });
+    };
+
+    if (search) {
+      queryParams.search = search;
+    }
+
+    const ordersResponse = await ikasClient.queries.listOrder(queryParams);
 
     console.log('iKAS response:', {
       isSuccess: ordersResponse.isSuccess,
