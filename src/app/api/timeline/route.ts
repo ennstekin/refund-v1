@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/helpers/api-helpers';
+import { getUserFromRequest } from '@/lib/auth-helpers';
 
 /**
  * GET - Fetch recent timeline events across all refunds
