@@ -23,6 +23,7 @@ type RefundData = {
     };
     totalFinalPrice?: number;
     currencySymbol?: string;
+    orderedAt?: string;
   } | null;
 };
 
@@ -123,6 +124,21 @@ export default function DashboardPage() {
     const today = new Date();
     const created = new Date(r.createdAt);
     return created.toDateString() === today.toDateString();
+  }).length;
+
+  // Check for refunds past the 15-day return window
+  const pastReturnWindow = refunds.filter(r => {
+    // Only check pending or processing refunds
+    if (r.status === 'completed' || r.status === 'rejected') return false;
+
+    if (!r.orderData?.orderedAt) return false;
+
+    const orderDate = new Date(r.orderData.orderedAt);
+    const daysSinceOrder = Math.floor(
+      (Date.now() - orderDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    return daysSinceOrder > 15;
   }).length;
 
   // Performance metrics
@@ -480,6 +496,23 @@ export default function DashboardPage() {
               Uyarılar ve Dikkat Gerektiren
             </h2>
             <div className="space-y-3">
+              {pastReturnWindow > 0 && (
+                <Link href="/refunds" className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-red-900">İade Süresi Geçmiş!</p>
+                      <p className="text-sm text-red-700">Sipariş tarihinden 15+ gün geçmiş</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-red-600">{pastReturnWindow}</span>
+                </Link>
+              )}
+
               {pendingOverSLA > 0 && (
                 <Link href="/refunds?status=pending" className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
                   <div className="flex items-center gap-3">
@@ -490,7 +523,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-red-900">SLA Aşıldı</p>
-                      <p className="text-sm text-red-700">3+ gün bekleyen iadeler</p>
+                      <p className="text-sm text-red-700">İade talebinden 3+ gün geçmiş</p>
                     </div>
                   </div>
                   <span className="text-2xl font-bold text-red-600">{pendingOverSLA}</span>
@@ -531,7 +564,7 @@ export default function DashboardPage() {
                 </Link>
               )}
 
-              {pendingOverSLA === 0 && missingTracking === 0 && createdToday === 0 && (
+              {pastReturnWindow === 0 && pendingOverSLA === 0 && missingTracking === 0 && createdToday === 0 && (
                 <div className="flex items-center justify-center p-6 text-gray-500">
                   <div className="text-center">
                     <svg className="w-12 h-12 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
