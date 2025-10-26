@@ -100,18 +100,20 @@ export default function SettingsPage() {
   };
 
   const getPortalFullUrl = () => {
+    // If merchant has custom domain, use it
     if (portalUrl && portalUrl.trim()) {
       return `https://${portalUrl.trim()}`;
     }
 
-    // Portal is deployed separately on Vercel
-    const PORTAL_BASE_URL = process.env.NEXT_PUBLIC_PORTAL_URL || 'https://refund-portal.vercel.app';
+    // Use the current deployment URL (works for any domain/Vercel deployment)
+    // This ensures multi-tenant support: each merchant gets same portal with their unique storeId
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     // Include merchant ID in default portal URL for multi-tenant support
     if (settings?.id) {
-      return `${PORTAL_BASE_URL}/portal?storeId=${settings.id}`;
+      return `${baseUrl}/portal?storeId=${settings.id}`;
     }
-    return `${PORTAL_BASE_URL}/portal`;
+    return `${baseUrl}/portal`;
   };
 
   const copyToClipboard = () => {
