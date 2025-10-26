@@ -225,8 +225,13 @@ export default function DashboardPage() {
     .filter(r => r.status === 'completed')
     .reduce((sum, r) => sum + (r.orderData?.totalFinalPrice || 0), 0);
 
+  // Filter iKAS refunded orders to only include current month
   const ikasRefundedAmount = ikasRefunds
-    .filter((order: any) => order.orderPaymentStatus === 'REFUNDED')
+    .filter((order: any) => {
+      if (order.orderPaymentStatus !== 'REFUNDED') return false;
+      const orderDate = new Date(order.orderedAt);
+      return orderDate >= thisMonthStart;
+    })
     .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
 
   const totalActualRefundAmount = completedRefundAmount + ikasRefundedAmount;
