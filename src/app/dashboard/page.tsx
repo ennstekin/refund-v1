@@ -220,21 +220,14 @@ export default function DashboardPage() {
   const avgRefundAmount = totalRefunds > 0 ? totalRefundAmount / totalRefunds : 0;
   const currencySymbol = refunds[0]?.orderData?.currencySymbol || '₺';
 
-  // Actual refunded amount (completed refunds from our system + refunded orders from ikas)
-  const completedRefundAmount = refunds
-    .filter(r => r.status === 'completed')
-    .reduce((sum, r) => sum + (r.orderData?.totalFinalPrice || 0), 0);
-
-  // Filter iKAS refunded orders to only include current month
-  const ikasRefundedAmount = ikasRefunds
+  // Total refunded amount: only iKAS refunded orders from current month
+  const totalActualRefundAmount = ikasRefunds
     .filter((order: any) => {
       if (order.orderPaymentStatus !== 'REFUNDED') return false;
       const orderDate = new Date(order.orderedAt);
       return orderDate >= thisMonthStart;
     })
     .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
-
-  const totalActualRefundAmount = completedRefundAmount + ikasRefundedAmount;
 
   return (
     <div className="container mx-auto p-6">
@@ -423,12 +416,12 @@ export default function DashboardPage() {
                     {currencySymbol}{totalActualRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                  <span>Manuel/Portal: {currencySymbol}{completedRefundAmount.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
-                  <span>İKAS: {currencySymbol}{ikasRefundedAmount.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {refunds.filter(r => r.status === 'completed').length + ikasRefunds.filter((o: any) => o.orderPaymentStatus === 'REFUNDED').length} iade tamamlandı
+                <p className="text-xs text-gray-500 mt-2">
+                  Bu ay içerisinde {ikasRefunds.filter((o: any) => {
+                    if (o.orderPaymentStatus !== 'REFUNDED') return false;
+                    const orderDate = new Date(o.orderedAt);
+                    return orderDate >= thisMonthStart;
+                  }).length} iKAS iadesi tamamlandı
                 </p>
               </div>
 
