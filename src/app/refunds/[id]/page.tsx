@@ -5,6 +5,7 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import { useParams, useRouter } from 'next/navigation';
+import { BackButton } from '@/components/BackButton';
 
 type RefundNote = {
   id: string;
@@ -264,12 +265,7 @@ export default function RefundDetailPage() {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-blue-600 hover:text-blue-900 mb-4"
-        >
-          ← Geri
-        </button>
+        <BackButton fallbackUrl="/refunds" className="mb-4" />
         <h1 className="text-3xl font-bold">İade Detayı</h1>
         <p className="text-gray-600 mt-2">Sipariş No: {refund.orderNumber}</p>
       </div>

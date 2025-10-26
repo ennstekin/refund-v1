@@ -6,6 +6,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
+import { BackButton } from '@/components/BackButton';
 
 type RefundWithOrder = {
   id: string;
@@ -400,6 +401,7 @@ export default function RefundsPage() {
 
   return (
     <div className="container mx-auto p-6">
+      <BackButton fallbackUrl="/dashboard" className="mb-4" />
       <div className="mb-6 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">İade Talepleri</h1>

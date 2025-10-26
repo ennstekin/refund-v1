@@ -5,6 +5,7 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import axios from 'axios';
+import { BackButton } from '@/components/BackButton';
 
 type MerchantSettings = {
   id: string;
@@ -129,6 +130,7 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
+      <BackButton fallbackUrl="/dashboard" className="mb-4" />
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Ayarlar</h1>
         <p className="text-gray-600 mt-2">İade portalı ve uygulama ayarlarını yönetin</p>
