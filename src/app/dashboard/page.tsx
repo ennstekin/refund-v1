@@ -14,6 +14,7 @@ type RefundData = {
   updatedAt: string;
   orderNumber: string;
   trackingNumber?: string | null;
+  reason?: string | null;
   orderData?: {
     customer?: {
       firstName?: string;
@@ -156,6 +157,69 @@ export default function DashboardPage() {
     ? Math.round((completedRefunds / totalRefunds) * 100)
     : 0;
 
+  // Refund reasons distribution
+  const reasonLabels: Record<string, string> = {
+    damaged_product: 'Hasarlı Ürün',
+    wrong_size: 'Yanlış Beden',
+    changed_mind: 'Fikir Değiştirdim',
+    defective: 'Arızalı Ürün',
+    not_as_described: 'Açıklamaya Uymuyor',
+    other: 'Diğer',
+  };
+
+  const reasonColors: Record<string, string> = {
+    damaged_product: '#ef4444',
+    wrong_size: '#f59e0b',
+    changed_mind: '#3b82f6',
+    defective: '#ef4444',
+    not_as_described: '#8b5cf6',
+    other: '#6b7280',
+  };
+
+  const reasonCounts = refunds.reduce((acc, refund) => {
+    const reason = refund.reason || 'other';
+    acc[reason] = (acc[reason] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const reasonStats = Object.entries(reasonCounts)
+    .map(([reason, count]) => ({
+      reason,
+      label: reasonLabels[reason] || 'Bilinmeyen',
+      color: reasonColors[reason] || '#6b7280',
+      count,
+      percentage: totalRefunds > 0 ? Math.round((count / totalRefunds) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Financial metrics
+  const totalRefundAmount = refunds.reduce((sum, r) => {
+    return sum + (r.orderData?.totalFinalPrice || 0);
+  }, 0);
+
+  const thisMonthStart = new Date();
+  thisMonthStart.setDate(1);
+  thisMonthStart.setHours(0, 0, 0, 0);
+
+  const lastMonthStart = new Date(thisMonthStart);
+  lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+
+  const thisMonthRefunds = refunds.filter(r => new Date(r.createdAt) >= thisMonthStart);
+  const lastMonthRefunds = refunds.filter(r => {
+    const created = new Date(r.createdAt);
+    return created >= lastMonthStart && created < thisMonthStart;
+  });
+
+  const thisMonthAmount = thisMonthRefunds.reduce((sum, r) => sum + (r.orderData?.totalFinalPrice || 0), 0);
+  const lastMonthAmount = lastMonthRefunds.reduce((sum, r) => sum + (r.orderData?.totalFinalPrice || 0), 0);
+
+  const monthlyAmountChange = lastMonthAmount > 0
+    ? Math.round(((thisMonthAmount - lastMonthAmount) / lastMonthAmount) * 100)
+    : 0;
+
+  const avgRefundAmount = totalRefunds > 0 ? totalRefundAmount / totalRefunds : 0;
+  const currencySymbol = refunds[0]?.orderData?.currencySymbol || '₺';
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">İade Yönetim Sistemi</h1>
@@ -258,6 +322,132 @@ export default function DashboardPage() {
               <p className="mt-3 text-xs text-gray-500">
                 Son 90 günlük
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Reasons & Financial Metrics Row */}
+      {!loadingStats && totalRefunds > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Refund Reasons Distribution */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+              </svg>
+              İade Nedenleri Dağılımı
+            </h2>
+
+            {reasonStats.length > 0 ? (
+              <div className="space-y-4">
+                {reasonStats.slice(0, 5).map((stat) => (
+                  <div key={stat.reason} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: stat.color }}
+                        />
+                        <span className="text-sm font-medium text-gray-700">{stat.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">{stat.count}</span>
+                        <span className="text-xs font-semibold text-gray-900 min-w-[3rem] text-right">
+                          %{stat.percentage}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${stat.percentage}%`,
+                          backgroundColor: stat.color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {reasonStats.length > 5 && (
+                  <p className="text-xs text-gray-500 text-center pt-2">
+                    +{reasonStats.length - 5} diğer sebep
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center p-8 text-gray-500">
+                <div className="text-center">
+                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-sm">Henüz veri yok</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Financial Metrics */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow p-6 border border-green-100">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Finansal Metrikler
+            </h2>
+
+            <div className="space-y-4">
+              {/* Total Refund Amount */}
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-1">Toplam İade Tutarı</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {currencySymbol}{totalRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{totalRefunds} iade talebi</p>
+              </div>
+
+              {/* Monthly Comparison */}
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-gray-600">Bu Ay vs Geçen Ay</p>
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    monthlyAmountChange > 0 ? 'bg-red-100 text-red-700' : monthlyAmountChange < 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {monthlyAmountChange > 0 ? '+' : ''}{monthlyAmountChange}%
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {currencySymbol}{thisMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Geçen ay: {currencySymbol}{lastMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              {/* Average Refund Amount */}
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-1">Ortalama İade Tutarı</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {currencySymbol}{avgRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 rounded-full"
+                      style={{ width: `${Math.min((avgRefundAmount / 1000) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500">/ 1000{currencySymbol}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
