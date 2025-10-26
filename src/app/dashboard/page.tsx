@@ -35,11 +35,9 @@ export default function DashboardPage() {
   const [ikasRefunds, setIkasRefunds] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
-  const [showNewRefundModal, setShowNewRefundModal] = useState(false);
 
   useEffect(() => {
     AppBridgeHelper.closeLoader();
-    // Set portal URL on client side to avoid hydration mismatch
     setPortalUrl(`${window.location.origin}/portal`);
   }, []);
 
@@ -126,11 +124,8 @@ export default function DashboardPage() {
     return created.toDateString() === today.toDateString();
   }).length;
 
-  // Check for refunds past the 15-day return window
   const pastReturnWindow = refunds.filter(r => {
-    // Only check pending or processing refunds
     if (r.status === 'completed' || r.status === 'rejected') return false;
-
     if (!r.orderData?.orderedAt) return false;
 
     const orderDate = new Date(r.orderData.orderedAt);
@@ -245,18 +240,99 @@ export default function DashboardPage() {
     })
     .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
 
+  const ikasRefundedCount = ikasRefunds.filter((o: any) => {
+    if (o.orderPaymentStatus !== 'REFUNDED') return false;
+    const orderDate = new Date(o.orderedAt);
+    return orderDate >= thisMonthStart;
+  }).length;
+
+  // Loading state
+  if (loadingStats) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white rounded-lg shadow p-6">
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-3"></div>
+              <div className="h-10 w-16 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!loadingStats && totalRefunds === 0) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">İade Yönetim Sistemi</h1>
+            {storeName && (
+              <p className="text-gray-600 mt-2">Mağaza: {storeName}</p>
+            )}
+          </div>
+          <Link
+            href="/settings"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+            title="Ayarlar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="font-medium">Ayarlar</span>
+          </Link>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <svg className="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+          </svg>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Henüz İade Kaydı Yok</h2>
+          <p className="text-gray-600 mb-6">İlk iade kaydınızı oluşturarak başlayın</p>
+
+          <div className="flex items-center justify-center gap-4">
+            <Link
+              href="/refunds/new"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              Yeni Manuel İade Oluştur
+            </Link>
+            <Link
+              href={portalUrl}
+              target="_blank"
+              className="px-6 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition font-medium"
+            >
+              Müşteri Portalını Görüntüle
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">İade Yönetim Sistemi</h1>
+          <h1 className="text-3xl font-bold text-gray-900">İade Yönetim Sistemi</h1>
           {storeName && (
-            <p className="text-gray-600 mt-2">Mağaza: {storeName}</p>
+            <p className="text-gray-600 mt-1">Mağaza: {storeName}</p>
           )}
         </div>
         <Link
           href="/settings"
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 rounded-lg transition-all shadow-sm hover:shadow"
           title="Ayarlar"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,123 +343,198 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* KPI Dashboard */}
-      {!loadingStats && totalRefunds > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Genel İstatistikler</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            {/* Toplam İadeler */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Toplam İade</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {totalRefunds}
-                  </p>
-                </div>
-                <div className="bg-gray-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
-                  </svg>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                Portal: {portalRefunds} | Manuel: {totalRefunds - portalRefunds}
-              </p>
-            </div>
-
-            {/* Bekleyen İadeler */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Bekleyen</p>
-                  <p className="text-3xl font-bold text-yellow-600">
-                    {pendingRefunds}
-                  </p>
-                </div>
-                <div className="bg-yellow-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* İşlenen İadeler */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">İşleniyor</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {processingRefunds}
-                  </p>
-                </div>
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Tamamlanan İadeler */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tamamlandı</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {completedRefunds}
-                  </p>
-                </div>
-                <div className="bg-green-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* İkas İade Siparişleri */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">İkas İadeler</p>
-                  <p className="text-3xl font-bold text-indigo-600">
-                    {ikasRefunds.length}
-                  </p>
-                </div>
-                <div className="bg-indigo-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                Son 90 günlük
-              </p>
+      {/* KPI Cards - 4 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Toplam İadeler */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+              </svg>
             </div>
           </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Toplam İade</p>
+          <p className="text-3xl font-bold text-gray-900 mb-2">{totalRefunds}</p>
+          <p className="text-xs text-gray-500">
+            Portal: {portalRefunds} • Manuel: {totalRefunds - portalRefunds}
+          </p>
         </div>
-      )}
 
-      {/* Refund Reasons & Financial Metrics Row */}
-      {!loadingStats && totalRefunds > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Refund Reasons Distribution */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        {/* Bekleyen İadeler */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-yellow-50 rounded-lg">
+              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Bekleyen</p>
+          <p className="text-3xl font-bold text-yellow-600 mb-2">{pendingRefunds}</p>
+          <p className="text-xs text-gray-500">
+            {pendingOverSLA > 0 ? `${pendingOverSLA} SLA aşıldı` : 'Hepsi zamanında'}
+          </p>
+        </div>
+
+        {/* İşlenen İadeler */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-indigo-50 rounded-lg">
               <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">İşleniyor</p>
+          <p className="text-3xl font-bold text-indigo-600 mb-2">{processingRefunds}</p>
+          <p className="text-xs text-gray-500">
+            {missingTracking > 0 ? `${missingTracking} takip eksik` : 'Tüm takipler mevcut'}
+          </p>
+        </div>
+
+        {/* Tamamlanan İadeler */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Tamamlandı</p>
+          <p className="text-3xl font-bold text-green-600 mb-2">{completedRefunds}</p>
+          <p className="text-xs text-gray-500">
+            Onay oranı: %{approvalRate}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Left Column - 2/3 */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Hızlı İşlemler - Made more prominent */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Hızlı İşlemler
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link
+                href="/refunds/new"
+                className="flex items-center gap-4 p-4 bg-white/10 backdrop-blur rounded-lg hover:bg-white/20 transition border border-white/20"
+              >
+                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold">Yeni Manuel İade</p>
+                  <p className="text-sm text-blue-100">İade talebi oluştur</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/refunds/all"
+                className="flex items-center gap-4 p-4 bg-white/10 backdrop-blur rounded-lg hover:bg-white/20 transition border border-white/20"
+              >
+                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold">Tüm İade Talepleri</p>
+                  <p className="text-sm text-blue-100">Manuel, portal ve iKAS</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Financial Metrics */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Finansal Özet
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                <p className="text-sm text-gray-600 mb-1">Toplam İade Tutarı (Bu Ay)</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {currencySymbol}{totalActualRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {ikasRefundedCount} iKAS iadesi tamamlandı
+                </p>
+              </div>
+
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-sm text-gray-600 mb-1">Ortalama İade Tutarı</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {currencySymbol}{avgRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className="mt-2 w-full bg-blue-200 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full"
+                    style={{ width: `${Math.min((avgRefundAmount / 1000) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm text-gray-600">Bu Ay vs Geçen Ay</p>
+                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    monthlyAmountChange > 0 ? 'bg-red-100 text-red-700' : monthlyAmountChange < 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {monthlyAmountChange > 0 ? '+' : ''}{monthlyAmountChange}%
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-purple-600">
+                  {currencySymbol}{thisMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Geçen ay: {currencySymbol}{lastMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                <p className="text-sm text-gray-600 mb-1">Performans Trendi</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-indigo-600">{thisWeekRefunds}</p>
+                  <span className="text-sm text-gray-500">/ {lastWeekRefunds} geçen hafta</span>
+                </div>
+                <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
+                  weekChange > 0 ? 'bg-green-100 text-green-700' : weekChange < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {weekChange > 0 ? '+' : ''}{weekChange}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Refund Reasons Distribution */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
               </svg>
-              İade Nedenleri Dağılımı
+              İade Nedenleri
             </h2>
 
             {reasonStats.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {reasonStats.slice(0, 5).map((stat) => (
-                  <div key={stat.reason} className="space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div key={stat.reason}>
+                    <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
@@ -393,14 +544,14 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">{stat.count}</span>
-                        <span className="text-xs font-semibold text-gray-900 min-w-[3rem] text-right">
+                        <span className="text-xs font-semibold text-gray-900 min-w-[2.5rem] text-right">
                           %{stat.percentage}
                         </span>
                       </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-gray-100 rounded-full h-2">
                       <div
-                        className="h-2 rounded-full transition-all duration-500"
+                        className="h-2 rounded-full transition-all"
                         style={{
                           width: `${stat.percentage}%`,
                           backgroundColor: stat.color,
@@ -409,220 +560,128 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
-
-                {reasonStats.length > 5 && (
-                  <p className="text-xs text-gray-500 text-center pt-2">
-                    +{reasonStats.length - 5} diğer sebep
-                  </p>
-                )}
               </div>
             ) : (
-              <div className="flex items-center justify-center p-8 text-gray-500">
-                <div className="text-center">
-                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <p className="text-sm">Henüz veri yok</p>
-                </div>
+              <div className="text-center py-8 text-gray-500">
+                <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p className="text-sm">Henüz veri yok</p>
               </div>
             )}
           </div>
-
-          {/* Financial Metrics */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow p-6 border border-green-100">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Finansal Metrikler
-            </h2>
-
-            <div className="space-y-4">
-              {/* Total Actual Refunded Amount */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 mb-1">Toplam İade Tutarı</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-green-600">
-                    {currencySymbol}{totalActualRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Bu ay içerisinde {ikasRefunds.filter((o: any) => {
-                    if (o.orderPaymentStatus !== 'REFUNDED') return false;
-                    const orderDate = new Date(o.orderedAt);
-                    return orderDate >= thisMonthStart;
-                  }).length} iKAS iadesi tamamlandı
-                </p>
-              </div>
-
-              {/* Monthly Comparison */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-600">Bu Ay vs Geçen Ay</p>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    monthlyAmountChange > 0 ? 'bg-red-100 text-red-700' : monthlyAmountChange < 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {monthlyAmountChange > 0 ? '+' : ''}{monthlyAmountChange}%
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {currencySymbol}{thisMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Geçen ay: {currencySymbol}{lastMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-
-              {/* Average Refund Amount */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 mb-1">Ortalama İade Tutarı</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {currencySymbol}{avgRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                    <div
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min((avgRefundAmount / 1000) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500">/ 1000{currencySymbol}</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
 
-      {/* Alerts & Performance Row */}
-      {!loadingStats && totalRefunds > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Alerts/Warnings Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Right Column - 1/3 */}
+        <div className="space-y-6">
+          {/* Uyarılar */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              Uyarılar ve Dikkat Gerektiren
+              Uyarılar
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {pastReturnWindow > 0 && (
                 <Link href="/refunds" className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-semibold text-red-900">İade Süresi Geçmiş!</p>
-                      <p className="text-sm text-red-700">Sipariş tarihinden 15+ gün geçmiş</p>
+                      <p className="font-semibold text-red-900 text-sm">İade Süresi Geçmiş</p>
+                      <p className="text-xs text-red-700">15+ gün geçti</p>
                     </div>
                   </div>
-                  <span className="text-2xl font-bold text-red-600">{pastReturnWindow}</span>
+                  <span className="text-xl font-bold text-red-600">{pastReturnWindow}</span>
                 </Link>
               )}
 
               {pendingOverSLA > 0 && (
-                <Link href="/refunds?status=pending" className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <Link href="/refunds?status=pending" className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-semibold text-red-900">SLA Aşıldı</p>
-                      <p className="text-sm text-red-700">İade talebinden 3+ gün geçmiş</p>
+                      <p className="font-semibold text-orange-900 text-sm">SLA Aşıldı</p>
+                      <p className="text-xs text-orange-700">3+ gün geçti</p>
                     </div>
                   </div>
-                  <span className="text-2xl font-bold text-red-600">{pendingOverSLA}</span>
+                  <span className="text-xl font-bold text-orange-600">{pendingOverSLA}</span>
                 </Link>
               )}
 
               {missingTracking > 0 && (
-                <Link href="/refunds?status=processing" className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <Link href="/refunds?status=processing" className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-semibold text-orange-900">Takip Eksik</p>
-                      <p className="text-sm text-orange-700">Takip numarası girilmemiş</p>
+                      <p className="font-semibold text-yellow-900 text-sm">Takip Eksik</p>
+                      <p className="text-xs text-yellow-700">Numara girilmemiş</p>
                     </div>
                   </div>
-                  <span className="text-2xl font-bold text-orange-600">{missingTracking}</span>
+                  <span className="text-xl font-bold text-yellow-600">{missingTracking}</span>
                 </Link>
               )}
 
               {createdToday > 0 && (
                 <Link href="/refunds" className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-semibold text-blue-900">Bugünkü Talepler</p>
-                      <p className="text-sm text-blue-700">Bugün oluşturulan iadeler</p>
+                      <p className="font-semibold text-blue-900 text-sm">Bugünkü Talepler</p>
+                      <p className="text-xs text-blue-700">Yeni oluşturuldu</p>
                     </div>
                   </div>
-                  <span className="text-2xl font-bold text-blue-600">{createdToday}</span>
+                  <span className="text-xl font-bold text-blue-600">{createdToday}</span>
                 </Link>
               )}
 
               {pastReturnWindow === 0 && pendingOverSLA === 0 && missingTracking === 0 && createdToday === 0 && (
-                <div className="flex items-center justify-center p-6 text-gray-500">
-                  <div className="text-center">
-                    <svg className="w-12 h-12 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="font-medium">Her şey yolunda!</p>
-                    <p className="text-sm">Bekleyen kritik durum yok</p>
-                  </div>
+                <div className="text-center py-6 text-gray-500">
+                  <svg className="w-12 h-12 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="font-medium text-sm">Her şey yolunda!</p>
+                  <p className="text-xs">Kritik durum yok</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Performance Metrics Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow p-6 border border-blue-100">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          {/* Performance Metrics */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              Performans Metrikleri
+              Performans
             </h2>
             <div className="space-y-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-600">Bu Hafta vs Geçen Hafta</p>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    weekChange > 0 ? 'bg-green-100 text-green-700' : weekChange < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                  <p className="text-sm text-gray-600">Ortalama Yanıt Süresi</p>
+                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    avgResponseTime <= 3 ? 'bg-green-100 text-green-700' : avgResponseTime <= 5 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                   }`}>
-                    {weekChange > 0 ? '+' : ''}{weekChange}%
+                    {avgResponseTime.toFixed(1)} gün
                   </span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900">{thisWeekRefunds}</span>
-                  <span className="text-sm text-gray-500">/ {lastWeekRefunds} geçen hafta</span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 mb-2">Ortalama Yanıt Süresi</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900">{avgResponseTime.toFixed(1)}</span>
-                  <span className="text-sm text-gray-500">gün</span>
-                </div>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-100 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full ${avgResponseTime <= 3 ? 'bg-green-500' : avgResponseTime <= 5 ? 'bg-yellow-500' : 'bg-red-500'}`}
                     style={{ width: `${Math.min((avgResponseTime / 7) * 100, 100)}%` }}
@@ -630,83 +689,30 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div>
                 <p className="text-sm text-gray-600 mb-2">İade Onay Oranı</p>
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-bold text-gray-900">{approvalRate}%</span>
                   <span className="text-sm text-gray-500">{completedRefunds}/{totalRefunds}</span>
                 </div>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style={{ width: `${approvalRate}%` }} />
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${approvalRate}%` }} />
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Quick Actions & Recent Activity Row */}
-      {!loadingStats && totalRefunds > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Quick Actions Widget */}
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow p-6 border border-purple-100">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Hızlı İşlemler
-            </h2>
-            <div className="space-y-3">
-              <Link
-                href="/refunds?action=new"
-                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-purple-200 hover:border-purple-300"
-              >
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Yeni Manuel İade</p>
-                  <p className="text-xs text-gray-600">İade talebi oluştur</p>
-                </div>
-              </Link>
-
-              <Link
-                href="/refunds/all"
-                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-purple-200 hover:border-purple-300"
-              >
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Tüm İade Talepleri</p>
-                  <p className="text-xs text-gray-600">Manuel, portal ve iKAS iadeleri</p>
-                </div>
-              </Link>
-            </div>
-          </div>
 
           {/* Recent Activity Timeline */}
-          <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Son Aktiviteler
             </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 max-h-96 overflow-y-auto">
               {timelineEvents.length > 0 ? (
-                timelineEvents.map((event, index) => {
-                  const eventTypeIcons: Record<string, string> = {
-                    created: 'M12 4v16m8-8H4',
-                    status_changed: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
-                    note_added: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z',
-                    tracking_updated: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
-                  };
-
+                timelineEvents.slice(0, 10).map((event) => {
                   const eventTypeColors: Record<string, string> = {
                     created: 'bg-blue-100 text-blue-700',
                     status_changed: 'bg-purple-100 text-purple-700',
@@ -714,26 +720,21 @@ export default function DashboardPage() {
                     tracking_updated: 'bg-green-100 text-green-700',
                   };
 
-                  const icon = eventTypeIcons[event.eventType] || 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
                   const colorClass = eventTypeColors[event.eventType] || 'bg-gray-100 text-gray-700';
 
                   return (
                     <Link
                       key={event.id}
                       href={`/refunds/${event.refundRequestId}`}
-                      className="flex gap-3 p-3 hover:bg-gray-50 rounded-lg transition border border-gray-100"
+                      className="flex gap-2 p-2 hover:bg-gray-50 rounded-lg transition"
                     >
-                      <div className={`w-10 h-10 ${colorClass} rounded-full flex items-center justify-center flex-shrink-0`}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
-                        </svg>
+                      <div className={`w-8 h-8 ${colorClass} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <div className="w-2 h-2 bg-current rounded-full"></div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{event.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">
-                            Sipariş #{event.refundRequest.orderNumber}
-                          </span>
+                        <p className="text-xs font-medium text-gray-900 truncate">{event.description}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs text-gray-500">#{event.refundRequest.orderNumber}</span>
                           <span className="text-xs text-gray-400">•</span>
                           <span className="text-xs text-gray-500">
                             {new Date(event.createdAt).toLocaleDateString('tr-TR', {
@@ -749,28 +750,25 @@ export default function DashboardPage() {
                   );
                 })
               ) : (
-                <div className="flex items-center justify-center p-8 text-gray-500">
-                  <div className="text-center">
-                    <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-sm">Henüz aktivite yok</p>
-                  </div>
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm">Henüz aktivite yok</p>
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-
-      {/* Recent Activity */}
-      {!loadingStats && refunds.length > 0 && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold">Son İade Talepleri</h2>
+      {/* Recent Refunds Table */}
+      {refunds.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-semibold">Son İade Talepleri</h2>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-100">
             {refunds.slice(0, 5).map((refund) => {
               const statusConfig = {
                 pending: { label: 'Bekliyor', color: 'bg-yellow-100 text-yellow-800' },
@@ -788,38 +786,32 @@ export default function DashboardPage() {
                 <Link key={refund.id} href={`/refunds/${refund.id}`} className="block p-4 hover:bg-gray-50 transition">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-semibold text-gray-900">Sipariş #{refund.orderNumber}</h3>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${status.color}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-gray-900">#{refund.orderNumber}</h3>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.color}`}>
                           {status.label}
                         </span>
                         {refund.source === 'portal' && (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                             Portal
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
                         <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                           {customerName}
                         </span>
                         {refund.orderData?.customer?.email && (
-                          <span className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            {refund.orderData.customer.email}
-                          </span>
+                          <>
+                            <span>•</span>
+                            <span>{refund.orderData.customer.email}</span>
+                          </>
                         )}
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {new Date(refund.createdAt).toLocaleDateString('tr-TR')}
-                        </span>
+                        <span>•</span>
+                        <span>{new Date(refund.createdAt).toLocaleDateString('tr-TR')}</span>
                       </div>
                     </div>
                     {refund.orderData?.totalFinalPrice && (
@@ -835,7 +827,7 @@ export default function DashboardPage() {
             })}
           </div>
           {refunds.length > 5 && (
-            <div className="p-4 border-t border-gray-200 text-center">
+            <div className="p-4 border-t border-gray-100 text-center bg-gray-50">
               <Link href="/refunds" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                 Tümünü Görüntüle ({refunds.length} iade)
               </Link>
