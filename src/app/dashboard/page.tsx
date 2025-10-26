@@ -13,6 +13,7 @@ type RefundData = {
   createdAt: string;
   updatedAt: string;
   orderNumber: string;
+  trackingNumber?: string | null;
   orderData?: {
     customer?: {
       firstName?: string;
@@ -31,6 +32,8 @@ export default function DashboardPage() {
   const [refunds, setRefunds] = useState<RefundData[]>([]);
   const [ikasRefunds, setIkasRefunds] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
+  const [showNewRefundModal, setShowNewRefundModal] = useState(false);
 
   useEffect(() => {
     AppBridgeHelper.closeLoader();
@@ -52,9 +55,10 @@ export default function DashboardPage() {
   const fetchRefundStats = useCallback(async (currentToken: string) => {
     try {
       setLoadingStats(true);
-      const [refundsRes, ikasRes] = await Promise.all([
+      const [refundsRes, ikasRes, timelineRes] = await Promise.all([
         ApiRequests.refunds.list(currentToken),
         ApiRequests.ikas.getRefundOrders(currentToken),
+        ApiRequests.timeline.getRecent(currentToken),
       ]);
 
       if (refundsRes.status === 200 && refundsRes.data?.data) {
@@ -63,6 +67,10 @@ export default function DashboardPage() {
 
       if (ikasRes.status === 200 && ikasRes.data?.data) {
         setIkasRefunds(Array.isArray(ikasRes.data.data) ? ikasRes.data.data : []);
+      }
+
+      if (timelineRes.status === 200 && timelineRes.data?.data) {
+        setTimelineEvents(Array.isArray(timelineRes.data.data) ? timelineRes.data.data : []);
       }
     } catch (error) {
       console.error('Error fetching refund stats:', error);
@@ -96,6 +104,57 @@ export default function DashboardPage() {
   const processingRefunds = refunds.filter(r => r.status === 'processing').length;
   const completedRefunds = refunds.filter(r => r.status === 'completed').length;
   const portalRefunds = refunds.filter(r => r.source === 'portal').length;
+
+  // Alert calculations
+  const pendingOverSLA = refunds.filter(r => {
+    if (r.status !== 'pending') return false;
+    const daysSinceCreated = Math.floor(
+      (Date.now() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return daysSinceCreated > 3;
+  }).length;
+
+  const missingTracking = refunds.filter(r =>
+    r.status === 'processing' && !r.trackingNumber
+  ).length;
+
+  const createdToday = refunds.filter(r => {
+    const today = new Date();
+    const created = new Date(r.createdAt);
+    return created.toDateString() === today.toDateString();
+  }).length;
+
+  // Performance metrics
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+  const thisWeekRefunds = refunds.filter(r => new Date(r.createdAt) >= oneWeekAgo).length;
+  const lastWeekRefunds = refunds.filter(r => {
+    const created = new Date(r.createdAt);
+    return created >= twoWeeksAgo && created < oneWeekAgo;
+  }).length;
+
+  const weekChange = lastWeekRefunds > 0
+    ? Math.round(((thisWeekRefunds - lastWeekRefunds) / lastWeekRefunds) * 100)
+    : 0;
+
+  const avgResponseTime = completedRefunds > 0
+    ? refunds
+        .filter(r => r.status === 'completed')
+        .reduce((sum, r) => {
+          const days = Math.floor(
+            (new Date(r.updatedAt).getTime() - new Date(r.createdAt).getTime())
+            / (1000 * 60 * 60 * 24)
+          );
+          return sum + days;
+        }, 0) / completedRefunds
+    : 0;
+
+  const approvalRate = totalRefunds > 0
+    ? Math.round((completedRefunds / totalRefunds) * 100)
+    : 0;
 
   return (
     <div className="container mx-auto p-6">
@@ -199,6 +258,270 @@ export default function DashboardPage() {
               <p className="mt-3 text-xs text-gray-500">
                 Son 90 günlük
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alerts & Performance Row */}
+      {!loadingStats && totalRefunds > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Alerts/Warnings Card */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Uyarılar ve Dikkat Gerektiren
+            </h2>
+            <div className="space-y-3">
+              {pendingOverSLA > 0 && (
+                <Link href="/refunds?status=pending" className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-red-900">SLA Aşıldı</p>
+                      <p className="text-sm text-red-700">3+ gün bekleyen iadeler</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-red-600">{pendingOverSLA}</span>
+                </Link>
+              )}
+
+              {missingTracking > 0 && (
+                <Link href="/refunds?status=processing" className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-orange-900">Takip Eksik</p>
+                      <p className="text-sm text-orange-700">Takip numarası girilmemiş</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-orange-600">{missingTracking}</span>
+                </Link>
+              )}
+
+              {createdToday > 0 && (
+                <Link href="/refunds" className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-blue-900">Bugünkü Talepler</p>
+                      <p className="text-sm text-blue-700">Bugün oluşturulan iadeler</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-blue-600">{createdToday}</span>
+                </Link>
+              )}
+
+              {pendingOverSLA === 0 && missingTracking === 0 && createdToday === 0 && (
+                <div className="flex items-center justify-center p-6 text-gray-500">
+                  <div className="text-center">
+                    <svg className="w-12 h-12 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="font-medium">Her şey yolunda!</p>
+                    <p className="text-sm">Bekleyen kritik durum yok</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Performance Metrics Card */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow p-6 border border-blue-100">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Performans Metrikleri
+            </h2>
+            <div className="space-y-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-gray-600">Bu Hafta vs Geçen Hafta</p>
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    weekChange > 0 ? 'bg-green-100 text-green-700' : weekChange < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {weekChange > 0 ? '+' : ''}{weekChange}%
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">{thisWeekRefunds}</span>
+                  <span className="text-sm text-gray-500">/ {lastWeekRefunds} geçen hafta</span>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-2">Ortalama Yanıt Süresi</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">{avgResponseTime.toFixed(1)}</span>
+                  <span className="text-sm text-gray-500">gün</span>
+                </div>
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${avgResponseTime <= 3 ? 'bg-green-500' : avgResponseTime <= 5 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{ width: `${Math.min((avgResponseTime / 7) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-2">İade Onay Oranı</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">{approvalRate}%</span>
+                  <span className="text-sm text-gray-500">{completedRefunds}/{totalRefunds}</span>
+                </div>
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style={{ width: `${approvalRate}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions & Recent Activity Row */}
+      {!loadingStats && totalRefunds > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Quick Actions Widget */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow p-6 border border-purple-100">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Hızlı İşlemler
+            </h2>
+            <div className="space-y-3">
+              <Link
+                href="/refunds?action=new"
+                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-purple-200 hover:border-purple-300"
+              >
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Yeni Manuel İade</p>
+                  <p className="text-xs text-gray-600">İade talebi oluştur</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/refunds"
+                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-purple-200 hover:border-purple-300"
+              >
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Tüm İadeler</p>
+                  <p className="text-xs text-gray-600">İade listesini görüntüle</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/settings"
+                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-purple-200 hover:border-purple-300"
+              >
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Ayarlar</p>
+                  <p className="text-xs text-gray-600">Portal ayarlarını düzenle</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Recent Activity Timeline */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Son Aktiviteler
+            </h2>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {timelineEvents.length > 0 ? (
+                timelineEvents.map((event, index) => {
+                  const eventTypeIcons: Record<string, string> = {
+                    created: 'M12 4v16m8-8H4',
+                    status_changed: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+                    note_added: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z',
+                    tracking_updated: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
+                  };
+
+                  const eventTypeColors: Record<string, string> = {
+                    created: 'bg-blue-100 text-blue-700',
+                    status_changed: 'bg-purple-100 text-purple-700',
+                    note_added: 'bg-yellow-100 text-yellow-700',
+                    tracking_updated: 'bg-green-100 text-green-700',
+                  };
+
+                  const icon = eventTypeIcons[event.eventType] || 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+                  const colorClass = eventTypeColors[event.eventType] || 'bg-gray-100 text-gray-700';
+
+                  return (
+                    <Link
+                      key={event.id}
+                      href={`/refunds/${event.refundRequestId}`}
+                      className="flex gap-3 p-3 hover:bg-gray-50 rounded-lg transition border border-gray-100"
+                    >
+                      <div className={`w-10 h-10 ${colorClass} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{event.description}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500">
+                            Sipariş #{event.refundRequest.orderNumber}
+                          </span>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(event.createdAt).toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="flex items-center justify-center p-8 text-gray-500">
+                  <div className="text-center">
+                    <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm">Henüz aktivite yok</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

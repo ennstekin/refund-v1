@@ -53,4 +53,7 @@ export const ApiRequests = {
     getNotes: (token: string, id: string) => makeGetRequest({ url: `/api/refunds/${id}/notes`, token }),
     getTimeline: (token: string, id: string) => makeGetRequest({ url: `/api/refunds/${id}/timeline`, token }),
   },
+  timeline: {
+    getRecent: (token: string) => makeGetRequest({ url: '/api/timeline', token }),
+  },
 };
