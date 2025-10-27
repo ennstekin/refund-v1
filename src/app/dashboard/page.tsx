@@ -250,18 +250,28 @@ export default function DashboardPage() {
     return orderDate >= fortyFiveDaysAgo;
   }).length;
 
-  // Pending refund amount: Refund requests with PAID status in iKAS
-  const pendingRefundAmount = ikasRefunds
+  // Pending refund amount: Orders with REFUND_REQUESTED status in iKAS
+  const refundRequestedAmount = ikasRefunds
     .filter((order: any) => {
-      // Check if this order has a refund request in our database
-      const hasRefundRequest = refunds.some(r => r.orderId === order.id);
-      return hasRefundRequest && order.orderPaymentStatus === 'PAID';
+      return order.orderPackageStatus === 'REFUND_REQUESTED';
     })
     .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
 
-  const pendingRefundCount = ikasRefunds.filter((order: any) => {
-    const hasRefundRequest = refunds.some(r => r.orderId === order.id);
-    return hasRefundRequest && order.orderPaymentStatus === 'PAID';
+  const refundRequestedCount = ikasRefunds.filter((order: any) => {
+    return order.orderPackageStatus === 'REFUND_REQUESTED';
+  }).length;
+
+  // Portal and manual refunds that are not completed (pending + processing)
+  const pendingManualPortalAmount = refunds
+    .filter((r: RefundData) => {
+      return (r.source === 'dashboard' || r.source === 'portal') &&
+             (r.status === 'pending' || r.status === 'processing');
+    })
+    .reduce((sum, r: RefundData) => sum + (r.orderData?.totalFinalPrice || 0), 0);
+
+  const pendingManualPortalCount = refunds.filter((r: RefundData) => {
+    return (r.source === 'dashboard' || r.source === 'portal') &&
+           (r.status === 'pending' || r.status === 'processing');
   }).length;
 
   // Loading state
@@ -508,16 +518,31 @@ export default function DashboardPage() {
 
               <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm text-gray-600">İade Bekleyen Siparişler</p>
+                  <p className="text-sm text-gray-600">İKAS İade Talepleri</p>
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">
-                    {pendingRefundCount} sipariş
+                    {refundRequestedCount} sipariş
                   </span>
                 </div>
                 <p className="text-2xl font-bold text-orange-600">
-                  {currencySymbol}{pendingRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                  {currencySymbol}{refundRequestedAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  İade talebi var, ödeme durumu: Ödendi
+                  REFUND_REQUESTED durumunda
+                </p>
+              </div>
+
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm text-gray-600">Bekleyen Manuel/Portal</p>
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">
+                    {pendingManualPortalCount} iade
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-purple-600">
+                  {currencySymbol}{pendingManualPortalAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Tamamlanmamış iadeler
                 </p>
               </div>
 
