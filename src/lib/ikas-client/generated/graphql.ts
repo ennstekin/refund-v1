@@ -151,7 +151,6 @@ export type ListOrderQueryData = {
   id: string;
   quantity: number;
   finalPrice?: number;
-  status: OrderLineItemStatusEnum;
   variant: {
   id?: string;
   name: string;
@@ -219,7 +218,6 @@ export type ListRefundOrdersQueryData = {
   id: string;
   quantity: number;
   finalPrice?: number;
-  status: OrderLineItemStatusEnum;
   variant: {
   id?: string;
   name: string;
@@ -246,7 +244,6 @@ export type ListRefundOrdersQueryData = {
   orderPackages?: Array<{
   id: string;
   orderPackageNumber: string;
-  orderPackageFulfillStatus: OrderPackageFulfillStatusEnum;
   trackingInfo?: {
   trackingNumber?: string;
   trackingLink?: string;
@@ -290,7 +287,6 @@ export type ListOrderDetailQueryData = {
   finalUnitPrice?: number;
   price: number;
   unitPrice?: number;
-  status: OrderLineItemStatusEnum;
   variant: {
   id?: string;
   name: string;
@@ -343,7 +339,6 @@ export type ListOrderDetailQueryData = {
   orderPackages?: Array<{
   id: string;
   orderPackageNumber: string;
-  orderPackageFulfillStatus: OrderPackageFulfillStatusEnum;
   trackingInfo?: {
   trackingNumber?: string;
   trackingLink?: string;
@@ -381,7 +376,6 @@ export type RefundOrderLineMutationData = {
   id: string;
   quantity: number;
   finalPrice?: number;
-  status: OrderLineItemStatusEnum;
   variant: {
   id?: string;
   name: string;
@@ -451,7 +445,6 @@ export class GeneratedQueries {
           id
           quantity
           finalPrice
-          status
           variant {
             id
             name
@@ -522,7 +515,6 @@ export class GeneratedQueries {
           id
           quantity
           finalPrice
-          status
           variant {
             id
             name
@@ -549,7 +541,6 @@ export class GeneratedQueries {
         orderPackages {
           id
           orderPackageNumber
-          orderPackageFulfillStatus
           trackingInfo {
             trackingNumber
             trackingLink
@@ -592,7 +583,6 @@ export class GeneratedQueries {
           finalUnitPrice
           price
           unitPrice
-          status
           variant {
             id
             name
@@ -645,7 +635,6 @@ export class GeneratedQueries {
         orderPackages {
           id
           orderPackageNumber
-          orderPackageFulfillStatus
           trackingInfo {
             trackingNumber
             trackingLink
@@ -690,7 +679,6 @@ export class GeneratedMutations {
         id
         quantity
         finalPrice
-        status
         variant {
           id
           name

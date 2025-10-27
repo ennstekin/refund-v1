@@ -43,7 +43,6 @@ export const LIST_ORDERS = gql`
           id
           quantity
           finalPrice
-          status
           variant {
             id
             name
@@ -111,7 +110,6 @@ export const LIST_REFUND_ORDERS = gql`
           id
           quantity
           finalPrice
-          status
           variant {
             id
             name
@@ -138,7 +136,6 @@ export const LIST_REFUND_ORDERS = gql`
         orderPackages {
           id
           orderPackageNumber
-          orderPackageFulfillStatus
           trackingInfo {
             trackingNumber
             trackingLink
@@ -178,7 +175,6 @@ export const GET_ORDER_DETAIL = gql`
           finalUnitPrice
           price
           unitPrice
-          status
           variant {
             id
             name
@@ -231,7 +227,6 @@ export const GET_ORDER_DETAIL = gql`
         orderPackages {
           id
           orderPackageNumber
-          orderPackageFulfillStatus
           trackingInfo {
             trackingNumber
             trackingLink
@@ -265,7 +260,6 @@ export const REFUND_ORDER_LINE = gql`
         id
         quantity
         finalPrice
-        status
         variant {
           id
           name

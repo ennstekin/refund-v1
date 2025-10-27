@@ -258,7 +258,7 @@ export default function RefundsPage() {
       });
 
       if (response.status === 200 && response.data?.data) {
-        const { id, existing } = response.data.data;
+        const { id, existing } = response.data.data as { id: string; existing: boolean; message: string };
         if (existing) {
           alert('Bu sipariş için zaten bir iade kaydı mevcut. Detay sayfasına yönlendiriliyorsunuz.');
         }
