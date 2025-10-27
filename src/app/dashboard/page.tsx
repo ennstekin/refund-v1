@@ -13,6 +13,7 @@ type RefundData = {
   createdAt: string;
   updatedAt: string;
   orderNumber: string;
+  orderId?: string;
   trackingNumber?: string | null;
   reason?: string | null;
   orderData?: {
@@ -231,19 +232,36 @@ export default function DashboardPage() {
   const avgRefundAmount = totalRefunds > 0 ? totalRefundAmount / totalRefunds : 0;
   const currencySymbol = refunds[0]?.orderData?.currencySymbol || '₺';
 
-  // Total refunded amount: only iKAS refunded orders from current month
+  // Total refunded amount: iKAS refunded orders from last 45 days
+  const fortyFiveDaysAgo = new Date();
+  fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
+
   const totalActualRefundAmount = ikasRefunds
     .filter((order: any) => {
       if (order.orderPaymentStatus !== 'REFUNDED') return false;
       const orderDate = new Date(order.orderedAt);
-      return orderDate >= thisMonthStart;
+      return orderDate >= fortyFiveDaysAgo;
     })
     .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
 
   const ikasRefundedCount = ikasRefunds.filter((o: any) => {
     if (o.orderPaymentStatus !== 'REFUNDED') return false;
     const orderDate = new Date(o.orderedAt);
-    return orderDate >= thisMonthStart;
+    return orderDate >= fortyFiveDaysAgo;
+  }).length;
+
+  // Pending refund amount: Refund requests with PAID status in iKAS
+  const pendingRefundAmount = ikasRefunds
+    .filter((order: any) => {
+      // Check if this order has a refund request in our database
+      const hasRefundRequest = refunds.some(r => r.orderId === order.id);
+      return hasRefundRequest && order.orderPaymentStatus === 'PAID';
+    })
+    .reduce((sum, order: any) => sum + (order.totalFinalPrice || 0), 0);
+
+  const pendingRefundCount = ikasRefunds.filter((order: any) => {
+    const hasRefundRequest = refunds.some(r => r.orderId === order.id);
+    return hasRefundRequest && order.orderPaymentStatus === 'PAID';
   }).length;
 
   // Loading state
@@ -466,12 +484,12 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                <p className="text-sm text-gray-600 mb-1">Toplam İade Tutarı (Bu Ay)</p>
+                <p className="text-sm text-gray-600 mb-1">Toplam İade Tutarı (Son 45 Gün)</p>
                 <p className="text-2xl font-bold text-green-600">
                   {currencySymbol}{totalActualRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {ikasRefundedCount} iKAS iadesi tamamlandı
+                  {ikasRefundedCount} iKAS iadesi tamamlandı (ödeme iade edildi)
                 </p>
               </div>
 
@@ -488,20 +506,18 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm text-gray-600">Bu Ay vs Geçen Ay</p>
-                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                    monthlyAmountChange > 0 ? 'bg-red-100 text-red-700' : monthlyAmountChange < 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {monthlyAmountChange > 0 ? '+' : ''}{monthlyAmountChange}%
+                  <p className="text-sm text-gray-600">İade Bekleyen Siparişler</p>
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">
+                    {pendingRefundCount} sipariş
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-purple-600">
-                  {currencySymbol}{thisMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                <p className="text-2xl font-bold text-orange-600">
+                  {currencySymbol}{pendingRefundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Geçen ay: {currencySymbol}{lastMonthAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                  İade talebi var, ödeme durumu: Ödendi
                 </p>
               </div>
 

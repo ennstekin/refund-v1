@@ -124,7 +124,18 @@ export default function RefundsPage() {
       if (res.status === 200) {
         // Handle both array and null/undefined data
         const data = res.data?.data;
-        setIkasRefunds(Array.isArray(data) ? (data as IkasRefundOrder[]) : []);
+        const allIkasOrders = Array.isArray(data) ? (data as IkasRefundOrder[]) : [];
+
+        // Filter iKAS orders from last 60 days
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        const recentIkasRefunds = allIkasOrders.filter((order: IkasRefundOrder) => {
+          const orderDate = new Date(order.orderedAt);
+          return orderDate >= sixtyDaysAgo;
+        });
+
+        setIkasRefunds(recentIkasRefunds);
       } else {
         setIkasError('İkas iade siparişleri yüklenemedi');
         setIkasRefunds([]);
@@ -716,6 +727,73 @@ export default function RefundsPage() {
         </div>
       )}
 
+      {/* KPI Dashboard - iKAS refunds */}
+      {activeTab === 'ikas' && ikasRefunds.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Total iKAS Refunds (60 days) */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Toplam İade (60 Gün)</p>
+                <p className="text-3xl font-bold text-blue-600">{ikasRefunds.length}</p>
+              </div>
+              <div className="bg-blue-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              iKAS sisteminden gelen iade talepleri
+            </p>
+          </div>
+
+          {/* Payment Status: REFUNDED */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Ödeme İade Edildi</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {ikasRefunds.filter(o => o.orderPaymentStatus === 'REFUNDED').length}
+                </p>
+              </div>
+              <div className="bg-green-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              İade tamamlanmış siparişler
+            </p>
+          </div>
+
+          {/* Total Refund Amount */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Toplam Tutar</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {(() => {
+                    const total = ikasRefunds.reduce((sum, order) => sum + order.totalFinalPrice, 0);
+                    const symbol = ikasRefunds[0]?.currencySymbol || '₺';
+                    return `${symbol}${total.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
+                  })()}
+                </p>
+              </div>
+              <div className="bg-orange-100 p-3 rounded-full">
+                <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              Son 60 günlük toplam iade tutarı
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       {((activeTab === 'manual' && refunds.length > 0) || (activeTab === 'ikas' && ikasRefunds.length > 0)) && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -1019,7 +1097,7 @@ export default function RefundsPage() {
           </div>
         ) : ikasRefunds.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500">Son 90 günde iade statüsünde sipariş bulunmamaktadır.</p>
+            <p className="text-gray-500">Son 60 günde iade statüsünde sipariş bulunmamaktadır.</p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -1085,13 +1163,28 @@ export default function RefundsPage() {
                       {order.orderPackages?.[0]?.trackingInfo?.trackingNumber || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => handleCreateRefund(order.id, order.orderNumber)}
-                        disabled={creatingRefund === order.id}
-                        className="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
-                      >
-                        {creatingRefund === order.id ? 'Oluşturuluyor...' : 'İade Kaydı Oluştur'}
-                      </button>
+                      {(() => {
+                        const existingRefund = refunds.find(r => r.orderId === order.id);
+                        if (existingRefund) {
+                          return (
+                            <button
+                              onClick={() => router.push(`/refunds/${existingRefund.id}`)}
+                              className="bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 text-sm"
+                            >
+                              İade Kaydı Var (Detay)
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => handleCreateRefund(order.id, order.orderNumber)}
+                            disabled={creatingRefund === order.id}
+                            className="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
+                          >
+                            {creatingRefund === order.id ? 'Oluşturuluyor...' : 'İade Kaydı Oluştur'}
+                          </button>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}

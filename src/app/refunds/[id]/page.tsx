@@ -619,8 +619,8 @@ export default function RefundDetailPage() {
 
       {/* Approve Refund Modal */}
       {showApproveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 animate-slideUp">
             <h2 className="text-2xl font-bold mb-4">İadeyi Onayla</h2>
 
             <div className="mb-6">
@@ -670,9 +670,41 @@ export default function RefundDetailPage() {
                       </li>
                     ))}
                   </ul>
-                  <p className="text-sm font-medium text-gray-700 mt-2">
-                    Toplam: {refund.orderData.currencySymbol}{refund.orderData.totalFinalPrice?.toFixed(2)}
-                  </p>
+                  {(() => {
+                    const itemsTotal = refund.orderData.orderLineItems.reduce((sum, item) => sum + (item.finalPrice || 0), 0);
+                    const shippingCost = (refund.orderData.totalPrice || 0) - itemsTotal;
+                    const refundAmount = approveOptions.refundShipping
+                      ? (refund.orderData.totalFinalPrice || 0)
+                      : (refund.orderData.totalFinalPrice || 0) - shippingCost;
+
+                    return (
+                      <>
+                        <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Ürünler Toplamı:</span>
+                            <span>{refund.orderData.currencySymbol}{itemsTotal.toFixed(2)}</span>
+                          </div>
+                          {shippingCost > 0 && (
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>Kargo Ücreti:</span>
+                              <span className={approveOptions.refundShipping ? 'text-green-600 font-medium' : ''}>
+                                {refund.orderData.currencySymbol}{shippingCost.toFixed(2)}
+                                {approveOptions.refundShipping && ' ✓'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-gray-300">
+                          <div className="flex justify-between">
+                            <span className="text-sm font-semibold text-gray-900">İade Edilecek Tutar:</span>
+                            <span className="text-base font-bold text-green-600">
+                              {refund.orderData.currencySymbol}{refundAmount.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
