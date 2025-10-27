@@ -103,6 +103,14 @@ export default function RefundDetailPage() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
 
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [approveOptions, setApproveOptions] = useState({
+    refundShipping: false,
+    sendNotificationToCustomer: true,
+    restockItems: true,
+  });
+
   const refundReasons = [
     { value: '', label: 'Neden Seçin' },
     { value: 'damaged_product', label: 'Hasarlı Ürün' },
@@ -196,6 +204,33 @@ export default function RefundDetailPage() {
       alert('İade güncellenirken bir hata oluştu');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleApproveRefund = async () => {
+    if (!token) return;
+
+    try {
+      setApproving(true);
+      const response = await ApiRequests.refunds.approve(token, id, {
+        ...approveOptions,
+        reason: newReason || refund?.reason || undefined,
+      });
+
+      if (response.status === 200) {
+        setShowApproveModal(false);
+        await fetchRefundDetail(token);
+        await fetchTimeline(token);
+        alert('İade başarıyla onaylandı ve iKAS\'ta işleme alındı!');
+      } else {
+        alert('İade onaylanırken bir hata oluştu');
+      }
+    } catch (err: any) {
+      console.error('Error approving refund:', err);
+      const errorMessage = err.response?.data?.error || 'İade onaylanırken bir hata oluştu';
+      alert(errorMessage);
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -345,6 +380,15 @@ export default function RefundDetailPage() {
               >
                 {updating ? 'Güncelleniyor...' : 'Güncelle'}
               </button>
+
+              {refund.status === 'pending' && (
+                <button
+                  onClick={() => setShowApproveModal(true)}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 mt-2"
+                >
+                  İadeyi Onayla (iKAS'ta İşle)
+                </button>
+              )}
             </div>
           </div>
 
@@ -572,6 +616,86 @@ export default function RefundDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Approve Refund Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold mb-4">İadeyi Onayla</h2>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                Bu işlem iadeyi iKAS sisteminde onaylayacak ve müşteriye iade işlemi başlatılacaktır.
+              </p>
+
+              <div className="space-y-3">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={approveOptions.refundShipping}
+                    onChange={(e) => setApproveOptions({ ...approveOptions, refundShipping: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Kargo ücretini de iade et</span>
+                </label>
+
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={approveOptions.sendNotificationToCustomer}
+                    onChange={(e) => setApproveOptions({ ...approveOptions, sendNotificationToCustomer: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Müşteriye bildirim gönder</span>
+                </label>
+
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={approveOptions.restockItems}
+                    onChange={(e) => setApproveOptions({ ...approveOptions, restockItems: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Ürünleri stoka geri ekle</span>
+                </label>
+              </div>
+
+              {refund.orderData?.orderLineItems && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm font-medium text-gray-700 mb-2">İade Edilecek Ürünler:</p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {refund.orderData.orderLineItems.map((item) => (
+                      <li key={item.id}>
+                        • {item.variant.name} - {item.quantity} adet
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-sm font-medium text-gray-700 mt-2">
+                    Toplam: {refund.orderData.currencySymbol}{refund.orderData.totalFinalPrice?.toFixed(2)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowApproveModal(false)}
+                disabled={approving}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleApproveRefund}
+                disabled={approving}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
+              >
+                {approving ? 'Onaylanıyor...' : 'Onayla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

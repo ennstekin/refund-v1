@@ -5,6 +5,7 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { BackButton } from '@/components/BackButton';
 
@@ -58,8 +59,10 @@ type IkasRefundOrder = {
 };
 
 export default function RefundsPage() {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'ikas' | 'manual' | 'portal'>('ikas');
+  const [creatingRefund, setCreatingRefund] = useState<string | null>(null); // orderId being created
 
   // Manuel iadeler
   const [refunds, setRefunds] = useState<RefundWithOrder[]>([]);
@@ -243,6 +246,35 @@ export default function RefundsPage() {
 
     setFilteredIkasRefunds(filtered);
   }, [ikasRefunds, searchQuery, dateFilter]);
+
+  const handleCreateRefund = async (orderId: string, orderNumber: string) => {
+    if (!token) return;
+
+    try {
+      setCreatingRefund(orderId);
+      const response = await ApiRequests.refunds.createFromOrder(token, {
+        orderId,
+        orderNumber,
+      });
+
+      if (response.status === 200 && response.data?.data) {
+        const { id, existing } = response.data.data;
+        if (existing) {
+          alert('Bu sipariş için zaten bir iade kaydı mevcut. Detay sayfasına yönlendiriliyorsunuz.');
+        }
+        // Redirect to refund detail page
+        router.push(`/refunds/${id}`);
+      } else {
+        alert('İade kaydı oluşturulurken bir hata oluştu');
+      }
+    } catch (err: any) {
+      console.error('Error creating refund:', err);
+      const errorMessage = err.response?.data?.error || 'İade kaydı oluşturulurken bir hata oluştu';
+      alert(errorMessage);
+    } finally {
+      setCreatingRefund(null);
+    }
+  };
 
   // Apply filters for portal refunds
   useEffect(() => {
@@ -1012,6 +1044,9 @@ export default function RefundsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Kargo Takip
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    İşlemler
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1048,6 +1083,15 @@ export default function RefundsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {order.orderPackages?.[0]?.trackingInfo?.trackingNumber || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => handleCreateRefund(order.id, order.orderNumber)}
+                        disabled={creatingRefund === order.id}
+                        className="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700 disabled:bg-gray-400 text-sm"
+                      >
+                        {creatingRefund === order.id ? 'Oluşturuluyor...' : 'İade Kaydı Oluştur'}
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -1,12 +1,49 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
-// Enum type aliases (codegen doesn't generate enums, using string for now)
-export type OrderStatusEnum = string;
-export type OrderPaymentStatusEnum = string;
-export type OrderPackageStatusEnum = string;
-export type OrderPackageFulfillStatusEnum = string;
-export type OrderLineItemStatusEnum = string;
-export type RefundStatusEnum = string;
+export enum OrderPackageStatusEnum {
+  CANCELLED = "CANCELLED",
+  CANCEL_REJECTED = "CANCEL_REJECTED",
+  CANCEL_REQUESTED = "CANCEL_REQUESTED",
+  DELIVERED = "DELIVERED",
+  FULFILLED = "FULFILLED",
+  PARTIALLY_CANCELLED = "PARTIALLY_CANCELLED",
+  PARTIALLY_DELIVERED = "PARTIALLY_DELIVERED",
+  PARTIALLY_FULFILLED = "PARTIALLY_FULFILLED",
+  PARTIALLY_READY_FOR_SHIPMENT = "PARTIALLY_READY_FOR_SHIPMENT",
+  PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED",
+  PLANNED = "PLANNED",
+  READY_FOR_PICK_UP = "READY_FOR_PICK_UP",
+  READY_FOR_SHIPMENT = "READY_FOR_SHIPMENT",
+  REFUNDED = "REFUNDED",
+  REFUND_DELIVERED = "REFUND_DELIVERED",
+  REFUND_IN_TRANSIT = "REFUND_IN_TRANSIT",
+  REFUND_REJECTED = "REFUND_REJECTED",
+  REFUND_REQUESTED = "REFUND_REQUESTED",
+  REFUND_REQUEST_ACCEPTED = "REFUND_REQUEST_ACCEPTED",
+  UNABLE_TO_DELIVER = "UNABLE_TO_DELIVER",
+  UNFULFILLED = "UNFULFILLED"
+}
+
+export enum OrderPaymentStatusEnum {
+  FAILED = "FAILED",
+  OVER_PAID = "OVER_PAID",
+  PAID = "PAID",
+  PARTIALLY_PAID = "PARTIALLY_PAID",
+  REFUNDED = "REFUNDED",
+  WAITING = "WAITING"
+}
+
+export enum OrderStatusEnum {
+  CANCELLED = "CANCELLED",
+  CREATED = "CREATED",
+  DRAFT = "DRAFT",
+  PARTIALLY_CANCELLED = "PARTIALLY_CANCELLED",
+  PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED",
+  REFUNDED = "REFUNDED",
+  REFUND_REJECTED = "REFUND_REJECTED",
+  REFUND_REQUESTED = "REFUND_REQUESTED",
+  WAITING_UPSELL_ACTION = "WAITING_UPSELL_ACTION"
+}
 
 export type DateFilterInput = {
   eq?: number;
@@ -19,9 +56,40 @@ export type DateFilterInput = {
   nin?: Array<number>;
 }
 
+export type OrderRefundLineInput = {
+  orderLineItemId: string;
+  price: number;
+  quantity: number;
+  restockItems: boolean;
+}
+
+export type OrderRefundTransactionInput = {
+  amount: number;
+  refundToStoreCredit?: boolean;
+  transactionId: string;
+}
+
 export type PaginationInput = {
   limit?: number;
   page?: number;
+}
+
+export type PublicOrderRefundBranchInfoInput = {
+  branchSessionId: string;
+  terminalId: string;
+}
+
+export type PublicOrderRefundInput = {
+  branchInfo?: PublicOrderRefundBranchInfoInput;
+  forceRefund?: boolean;
+  orderId: string;
+  orderRefundLines: Array<OrderRefundLineInput>;
+  orderRefundTransactions?: Array<OrderRefundTransactionInput>;
+  reason?: string;
+  refundGift?: boolean;
+  refundShipping?: boolean;
+  sendNotificationToCustomer?: boolean;
+  stockLocationId?: string;
 }
 
 export type StringFilterInput = {
@@ -286,6 +354,44 @@ export type ListOrderDetailQueryData = {
 
 export interface ListOrderDetailQuery {
   listOrder: ListOrderDetailQueryData;
+}
+
+export type RefundOrderLineMutationVariables = {
+  input: PublicOrderRefundInput;
+}
+
+export type RefundOrderLineMutationData = {
+  id: string;
+  orderNumber?: string;
+  status: OrderStatusEnum;
+  orderPaymentStatus?: OrderPaymentStatusEnum;
+  orderPackageStatus?: OrderPackageStatusEnum;
+  totalFinalPrice: number;
+  totalPrice: number;
+  currencyCode: string;
+  currencySymbol?: string;
+  orderedAt?: number;
+  customer?: {
+  id?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+};
+  orderLineItems: Array<{
+  id: string;
+  quantity: number;
+  finalPrice?: number;
+  status: OrderLineItemStatusEnum;
+  variant: {
+  id?: string;
+  name: string;
+  sku?: string;
+};
+}>;
+}
+
+export interface RefundOrderLineMutation {
+  refundOrderLine: RefundOrderLineMutationData;
 }
 
 export class GeneratedQueries {
@@ -553,11 +659,58 @@ export class GeneratedQueries {
   }
 }
 
+export class GeneratedMutations {
+  client: BaseGraphQLAPIClient<any>;
+
+  constructor(client: BaseGraphQLAPIClient<any>) {
+    this.client = client;
+  }
+
+  async refundOrderLine(variables: RefundOrderLineMutationVariables): Promise<APIResult<Partial<RefundOrderLineMutation>>> {
+    const mutation = `
+  mutation refundOrderLine($input: PublicOrderRefundInput!) {
+    refundOrderLine(input: $input) {
+      id
+      orderNumber
+      status
+      orderPaymentStatus
+      orderPackageStatus
+      totalFinalPrice
+      totalPrice
+      currencyCode
+      currencySymbol
+      orderedAt
+      customer {
+        id
+        email
+        firstName
+        lastName
+      }
+      orderLineItems {
+        id
+        quantity
+        finalPrice
+        status
+        variant {
+          id
+          name
+          sku
+        }
+      }
+    }
+  }
+`;
+    return this.client.mutate<Partial<RefundOrderLineMutation>>({ mutation, variables });
+  }
+}
+
 export class ikasAdminGraphQLAPIClient<TokenData> extends BaseGraphQLAPIClient<TokenData> {
   queries: GeneratedQueries;
+  mutations: GeneratedMutations;
 
   constructor(options: BaseGraphQLAPIClientOptions<TokenData>) {
     super(options);
     this.queries = new GeneratedQueries(this);
+    this.mutations = new GeneratedMutations(this);
   }
 }

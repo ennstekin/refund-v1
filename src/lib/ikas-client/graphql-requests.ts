@@ -241,3 +241,37 @@ export const GET_ORDER_DETAIL = gql`
     }
   }
 `;
+
+export const REFUND_ORDER_LINE = gql`
+  mutation refundOrderLine($input: PublicOrderRefundInput!) {
+    refundOrderLine(input: $input) {
+      id
+      orderNumber
+      status
+      orderPaymentStatus
+      orderPackageStatus
+      totalFinalPrice
+      totalPrice
+      currencyCode
+      currencySymbol
+      orderedAt
+      customer {
+        id
+        email
+        firstName
+        lastName
+      }
+      orderLineItems {
+        id
+        quantity
+        finalPrice
+        status
+        variant {
+          id
+          name
+          sku
+        }
+      }
+    }
+  }
+`;

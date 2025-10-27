@@ -46,12 +46,16 @@ export const ApiRequests = {
     get: (token: string, id: string) => makeGetRequest({ url: `/api/refunds/${id}`, token }),
     create: (token: string, data: { orderId: string; orderNumber: string; status?: string; trackingNumber?: string; reason?: string; reasonNote?: string }) =>
       makePostRequest({ url: '/api/refunds', token, data }),
+    createFromOrder: (token: string, data: { orderId: string; orderNumber: string }) =>
+      makePostRequest({ url: '/api/refunds/create-from-order', token, data }),
     update: (token: string, id: string, data: { status?: string; trackingNumber?: string; reason?: string; reasonNote?: string }) =>
       makePatchRequest({ url: `/api/refunds/${id}`, token, data }),
     addNote: (token: string, id: string, data: { content: string; createdBy: string }) =>
       makePostRequest({ url: `/api/refunds/${id}/notes`, token, data }),
     getNotes: (token: string, id: string) => makeGetRequest({ url: `/api/refunds/${id}/notes`, token }),
     getTimeline: (token: string, id: string) => makeGetRequest({ url: `/api/refunds/${id}/timeline`, token }),
+    approve: (token: string, id: string, data: { refundShipping?: boolean; sendNotificationToCustomer?: boolean; restockItems?: boolean; reason?: string }) =>
+      makePostRequest({ url: `/api/refunds/${id}/approve`, token, data }),
   },
   timeline: {
     getRecent: (token: string) => makeGetRequest({ url: '/api/timeline', token }),
