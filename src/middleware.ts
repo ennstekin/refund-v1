@@ -39,15 +39,18 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. Add subdomain to headers (API routes will do the database lookup)
+  // 3. Subdomain detected → redirect to portal page
   const headers = new Headers(request.headers);
-  headers.delete('x-merchant-id'); // Remove any user-sent header (security)
-  headers.delete('x-subdomain');
-
   headers.set('x-subdomain', subdomain);
-  headers.set('x-source', 'subdomain'); // For analytics
+  headers.set('x-source', 'subdomain');
 
-  // 4. Continue to Next.js routing (pages will handle merchant lookup)
+  // If accessing root domain with subdomain, redirect to portal
+  if (url.pathname === '/' || url.pathname === '') {
+    const portalUrl = new URL('/portal', request.url);
+    return NextResponse.rewrite(portalUrl, { request: { headers } });
+  }
+
+  // For other paths (API routes, portal pages), add headers and continue
   return NextResponse.next({ request: { headers } });
 }
 
