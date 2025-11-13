@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIkas } from '@/helpers/api-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
+import { rateLimit, getClientIp, getRateLimitMessage } from '@/lib/rate-limit';
 
 /**
  * POST - Public endpoint to verify order by order number and email
@@ -9,13 +10,41 @@ import { prisma } from '@/lib/prisma';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 10 requests per minute per IP
+    const clientIp = getClientIp(request);
+    const rateLimitResult = rateLimit(clientIp, {
+      max: 10, // 10 requests
+      windowMs: 60 * 1000, // per minute
+    });
+
+    // Add rate limit headers to response
+    const headers = {
+      'X-RateLimit-Limit': '10',
+      'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+      'X-RateLimit-Reset': rateLimitResult.resetIn.toString(),
+    };
+
+    if (!rateLimitResult.success) {
+      console.warn(`[SECURITY] Rate limit exceeded for IP: ${clientIp}`);
+      return NextResponse.json(
+        {
+          error: getRateLimitMessage(rateLimitResult),
+          verified: false,
+        },
+        {
+          status: 429, // Too Many Requests
+          headers,
+        }
+      );
+    }
+
     const body = await request.json();
     const { orderNumber, email } = body;
 
     if (!orderNumber || !email) {
       return NextResponse.json(
         { error: 'Sipariş numarası ve email adresi gerekli' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 

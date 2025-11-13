@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIkas } from '@/helpers/api-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
+import { rateLimit, getClientIp, getRateLimitMessage } from '@/lib/rate-limit';
 
 /**
  * GET - Public endpoint to track refund status by refund ID
@@ -9,6 +10,24 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: 20 requests per minute per IP (more lenient for tracking)
+    const clientIp = getClientIp(request);
+    const rateLimitResult = rateLimit(clientIp, {
+      max: 20, // 20 requests
+      windowMs: 60 * 1000, // per minute
+    });
+
+    if (!rateLimitResult.success) {
+      console.warn(`[SECURITY] Rate limit exceeded for IP: ${clientIp} on track-refund`);
+      return NextResponse.json(
+        {
+          error: getRateLimitMessage(rateLimitResult),
+          success: false,
+        },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const refundId = searchParams.get('refundId');
 
