@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIkas } from '@/helpers/api-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
-import { SubdomainHelpers } from '@/helpers/subdomain-helpers';
 
 /**
  * POST - Public endpoint to verify order by order number and email
@@ -20,48 +19,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the merchant's authorized app ID from subdomain (header), query params, or fallback
-    // Priority: subdomain > storeId > storeName > fallback
-    const subdomain = request.headers.get('x-subdomain');
-    const url = new URL(request.url);
-    const storeId = url.searchParams.get('storeId');
-    const storeName = url.searchParams.get('storeName');
-
-    let merchant;
-
-    // 1. Try subdomain first (most secure, multi-tenant)
-    if (subdomain) {
-      const merchantId = await SubdomainHelpers.getMerchantBySubdomain(subdomain);
-      if (merchantId) {
-        merchant = await prisma.merchant.findUnique({ where: { id: merchantId } });
-      }
-    }
-
-    // 2. Development mode - use mock merchant
-    if (!merchant && process.env.DEV_MODE === 'true' && storeId === process.env.DEV_MERCHANT_ID) {
-      merchant = {
-        id: process.env.DEV_MERCHANT_ID || '',
-        authorizedAppId: process.env.DEV_AUTHORIZED_APP_ID || '',
-        storeName: 'dev-test-store',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    }
-
-    // 3. Find by merchant ID (backward compatibility)
-    if (!merchant && storeId) {
-      merchant = await prisma.merchant.findUnique({ where: { id: storeId } });
-    }
-
-    // 4. Find by store name (backward compatibility)
-    if (!merchant && storeName) {
-      merchant = await prisma.merchant.findFirst({ where: { storeName } });
-    }
-
-    // 5. Fallback: get first available merchant (backward compatibility)
-    if (!merchant) {
-      merchant = await prisma.merchant.findFirst();
-    }
+    // Get the merchant - use the FIRST merchant (single tenant for now)
+    // This bypasses subdomain lookup which may be causing delays
+    const merchant = await prisma.merchant.findFirst({
+      where: {
+        portalEnabled: true,
+      },
+      orderBy: {
+        createdAt: 'desc', // Get the latest merchant
+      },
+    });
 
     if (!merchant) {
       return NextResponse.json(
