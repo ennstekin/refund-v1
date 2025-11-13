@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIkas } from '@/helpers/api-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
+import { SubdomainHelpers } from '@/helpers/subdomain-helpers';
 
 /**
  * POST - Public endpoint to verify order by order number and email
@@ -19,16 +20,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the merchant's authorized app ID from query params or headers
-    // Support both storeId (merchant ID) and storeName query parameters
+    // Get the merchant's authorized app ID from subdomain (header), query params, or fallback
+    // Priority: subdomain > storeId > storeName > fallback
+    const subdomain = request.headers.get('x-subdomain');
     const url = new URL(request.url);
     const storeId = url.searchParams.get('storeId');
     const storeName = url.searchParams.get('storeName');
 
     let merchant;
 
-    // Development mode - use mock merchant
-    if (process.env.DEV_MODE === 'true' && storeId === process.env.DEV_MERCHANT_ID) {
+    // 1. Try subdomain first (most secure, multi-tenant)
+    if (subdomain) {
+      const merchantId = await SubdomainHelpers.getMerchantBySubdomain(subdomain);
+      if (merchantId) {
+        merchant = await prisma.merchant.findUnique({ where: { id: merchantId } });
+      }
+    }
+
+    // 2. Development mode - use mock merchant
+    if (!merchant && process.env.DEV_MODE === 'true' && storeId === process.env.DEV_MERCHANT_ID) {
       merchant = {
         id: process.env.DEV_MERCHANT_ID || '',
         authorizedAppId: process.env.DEV_AUTHORIZED_APP_ID || '',
@@ -36,14 +46,20 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-    } else if (storeId) {
-      // Find by merchant ID
+    }
+
+    // 3. Find by merchant ID (backward compatibility)
+    if (!merchant && storeId) {
       merchant = await prisma.merchant.findUnique({ where: { id: storeId } });
-    } else if (storeName) {
-      // Find by store name
+    }
+
+    // 4. Find by store name (backward compatibility)
+    if (!merchant && storeName) {
       merchant = await prisma.merchant.findFirst({ where: { storeName } });
-    } else {
-      // Fallback: get first available merchant (for backward compatibility)
+    }
+
+    // 5. Fallback: get first available merchant (backward compatibility)
+    if (!merchant) {
       merchant = await prisma.merchant.findFirst();
     }
 

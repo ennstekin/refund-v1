@@ -39,24 +39,15 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. Subdomain lookup → merchantId
-  const merchantId = await SubdomainHelpers.getMerchantBySubdomain(subdomain);
-
-  if (!merchantId) {
-    // Invalid subdomain → show not found page
-    return NextResponse.rewrite(new URL('/portal-not-found', request.url));
-  }
-
-  // 4. Add merchantId to headers (for API routes to use)
+  // 3. Add subdomain to headers (API routes will do the database lookup)
   const headers = new Headers(request.headers);
   headers.delete('x-merchant-id'); // Remove any user-sent header (security)
   headers.delete('x-subdomain');
 
-  headers.set('x-merchant-id', merchantId);
   headers.set('x-subdomain', subdomain);
   headers.set('x-source', 'subdomain'); // For analytics
 
-  // 5. Continue to Next.js routing
+  // 4. Continue to Next.js routing (pages will handle merchant lookup)
   return NextResponse.next({ request: { headers } });
 }
 
