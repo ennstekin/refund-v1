@@ -327,7 +327,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!orderResponse.isSuccess || !orderResponse.data?.listOrder?.data?.[0]) {
+    // Check if orderResponse is defined (should be after successful retry)
+    if (!orderResponse || !orderResponse.isSuccess || !orderResponse.data?.listOrder?.data?.[0]) {
       return NextResponse.json(
         { error: 'Sipariş bulunamadı', verified: false },
         { status: 404 }
