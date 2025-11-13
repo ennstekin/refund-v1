@@ -317,10 +317,29 @@ export async function POST(request: NextRequest) {
 
     // Search for order in ikas using exact orderNumber match
     const ikasClient = getIkas(authToken);
-    const orderResponse = await ikasClient.queries.listOrder({
-      pagination: { limit: 1 },
-      orderNumber: { eq: orderNumber.trim() },
-    });
+
+    let orderResponse;
+    try {
+      orderResponse = await ikasClient.queries.listOrder({
+        pagination: { limit: 1 },
+        orderNumber: { eq: orderNumber.trim() },
+      });
+    } catch (error: any) {
+      console.error('ikas API error:', error);
+
+      // Handle timeout or network errors
+      if (error.code === 'ERR_BAD_RESPONSE' || error.status === 504) {
+        return NextResponse.json(
+          { error: 'Mağaza sistemi şu an yoğun. Lütfen birkaç saniye sonra tekrar deneyin.', verified: false },
+          { status: 503 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: 'Sipariş sorgulanırken bir hata oluştu. Lütfen tekrar deneyin.', verified: false },
+        { status: 500 }
+      );
+    }
 
     if (!orderResponse.isSuccess || !orderResponse.data?.listOrder?.data?.[0]) {
       return NextResponse.json(
