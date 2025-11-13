@@ -6,7 +6,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
  * S3-compatible storage service
  */
 class R2ClientClass {
-  private client: S3Client;
+  private client: S3Client | null;
   private bucketName: string;
   private publicUrl: string;
 
@@ -16,6 +16,7 @@ class R2ClientClass {
     const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
     this.bucketName = process.env.R2_BUCKET_NAME || 'refund-images';
     this.publicUrl = process.env.R2_PUBLIC_URL || '';
+    this.client = null;
 
     // Development mode: Skip R2 setup if credentials not provided
     if (!accountId || !accessKeyId || !secretAccessKey) {
