@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIkas } from '@/helpers/api-helpers';
-import { AuthTokenManager } from '@/lib/auth-token-manager';
+import { AuthTokenManager } from '@/models/auth-token/manager';
 
 export async function POST(request: NextRequest) {
   try {
