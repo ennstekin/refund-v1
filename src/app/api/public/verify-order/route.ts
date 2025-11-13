@@ -319,27 +319,45 @@ export async function POST(request: NextRequest) {
     const ikasClient = getIkas(authToken);
 
     let orderResponse;
-    try {
-      // Use minimal field query for faster response
-      orderResponse = await ikasClient.queries.verifyOrder({
-        orderNumber: { eq: orderNumber.trim() },
-        pagination: { limit: 1 },
-      });
-    } catch (error: any) {
-      console.error('ikas API error:', error);
+    let lastError: any;
 
-      // Handle timeout or network errors
-      if (error.code === 'ERR_BAD_RESPONSE' || error.status === 504) {
-        return NextResponse.json(
-          { error: 'Mağaza sistemi şu an yoğun. Lütfen birkaç saniye sonra tekrar deneyin.', verified: false },
-          { status: 503 }
-        );
+    // Retry mechanism: Try up to 2 times with 2 second delay
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`[Attempt ${attempt}/2] Querying order ${orderNumber.trim()}`);
+
+        // Use minimal field query for faster response
+        orderResponse = await ikasClient.queries.verifyOrder({
+          orderNumber: { eq: orderNumber.trim() },
+          pagination: { limit: 1 },
+        });
+
+        console.log(`[Attempt ${attempt}/2] Success!`);
+        break; // Success, exit retry loop
+      } catch (error: any) {
+        lastError = error;
+        console.error(`[Attempt ${attempt}/2] ikas API error:`, error.message || error);
+
+        // If it's the last attempt, don't retry
+        if (attempt === 2) {
+          // Handle timeout or network errors
+          if (error.code === 'ERR_BAD_RESPONSE' || error.status === 504) {
+            return NextResponse.json(
+              { error: 'Mağaza sistemi şu an çok yoğun. Lütfen 1 dakika sonra tekrar deneyin.', verified: false },
+              { status: 503 }
+            );
+          }
+
+          return NextResponse.json(
+            { error: 'Sipariş sorgulanırken bir hata oluştu. Lütfen tekrar deneyin.', verified: false },
+            { status: 500 }
+          );
+        }
+
+        // Wait 2 seconds before retry
+        console.log(`[Attempt ${attempt}/2] Retrying in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-
-      return NextResponse.json(
-        { error: 'Sipariş sorgulanırken bir hata oluştu. Lütfen tekrar deneyin.', verified: false },
-        { status: 500 }
-      );
     }
 
     if (!orderResponse.isSuccess || !orderResponse.data?.listOrder?.data?.[0]) {

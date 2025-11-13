@@ -33,8 +33,11 @@ export async function onCheckToken(token?: AuthToken): Promise<{ accessToken: st
     const now = new Date();
     const expireDate = new Date(token.expireDate);
 
-    // If the token is expired, attempt to refresh it.
-    if (now.getTime() >= expireDate.getTime()) {
+    // Refresh token 5 minutes BEFORE expiration to avoid timeouts
+    const fiveMinutesBeforeExpiry = expireDate.getTime() - (5 * 60 * 1000);
+
+    // If the token is expired or about to expire, attempt to refresh it.
+    if (now.getTime() >= fiveMinutesBeforeExpiry) {
       const response = await OAuthAPI.refreshToken(
         {
           refresh_token: token.refreshToken,
