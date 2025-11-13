@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/helpers/api-helpers';
+import { getUserFromRequest } from '@/lib/auth-helpers';
 import { prisma } from '@/lib/prisma';
 import { SubdomainHelpers } from '@/helpers/subdomain-helpers';
 
