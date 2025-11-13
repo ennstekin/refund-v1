@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create refund request
+    // Note: images now contains R2 public URLs, not base64 strings
     const refundRequest = await prisma.refundRequest.create({
       data: {
         orderId,
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
         reason,
         reasonNote: reasonNote || null,
         trackingNumber: null,
-        images: images && images.length > 0 ? JSON.stringify(images) : null,
+        images: images && images.length > 0 ? JSON.stringify(images) : null, // Storing R2 URLs
         source: 'portal', // Portal'dan oluşturulan iade
       },
     });

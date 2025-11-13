@@ -73,8 +73,40 @@ model Merchant {
   authorizedAppId String   @unique
   storeName       String?
   email           String?
+
+  // Subdomain system
+  subdomain       String?  @unique // Auto-generated subdomain (e.g., "ornek-magaza")
+  subdomainStatus String   @default("pending") // pending, active, suspended
+  subdomainChangedAt DateTime? // Last time subdomain was changed
+  subdomainChangeCount Int   @default(0) // How many times subdomain was changed (limit to 1)
+
+  // Custom domain (optional)
   portalUrl       String?  // Custom portal URL (e.g., iade.magaza.com)
+  customDomainStatus String @default("none") // none, pending, verified, failed
+
   portalEnabled   Boolean  @default(true)
+  onboardingCompleted Boolean @default(false) // Has merchant completed onboarding?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// Restricted/Reserved subdomain list (system subdomains that can't be used)
+model RestrictedSubdomain {
+  id        String   @id @default(cuid())
+  subdomain String   @unique
+  reason    String   // "system", "reserved", "inappropriate"
+  createdAt DateTime @default(now())
+}
+
+// Optional: Subdomain reservation tracking (for future use)
+model SubdomainReservation {
+  id         String    @id @default(cuid())
+  subdomain  String    @unique
+  merchantId String?   // null if available
+  status     String    @default("available") // available, reserved, active
+  reservedAt DateTime  @default(now())
+  expiresAt  DateTime?
+
+  @@index([subdomain, status])
 }

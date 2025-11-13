@@ -35,7 +35,30 @@ export default function RefundCompletePage() {
     try {
       setSubmitting(true);
 
-      // Submit refund request
+      let imageUrls: string[] = [];
+
+      // Upload images to R2 first if there are any
+      if (images.length > 0) {
+        try {
+          const uploadResponse = await axios.post('/api/public/upload-image', {
+            merchantId: orderData.merchantId,
+            orderId: orderData.id,
+            images: images, // base64 images
+          });
+
+          if (uploadResponse.data.success) {
+            imageUrls = uploadResponse.data.urls;
+          } else {
+            console.error('Image upload failed:', uploadResponse.data.error);
+            // Continue without images - don't block refund submission
+          }
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          // Continue without images - don't block refund submission
+        }
+      }
+
+      // Submit refund request with image URLs
       const response = await axios.post('/api/public/submit-refund', {
         orderId: orderData.id,
         orderNumber: orderData.orderNumber,
@@ -43,7 +66,7 @@ export default function RefundCompletePage() {
         customerEmail: orderData.customer.email,
         reason: reasonData.reason,
         reasonNote: reasonData.note,
-        images: images, // In production, upload to storage first
+        images: imageUrls.length > 0 ? imageUrls : undefined, // Send URLs instead of base64
       });
 
       if (response.data.success) {

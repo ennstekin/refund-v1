@@ -7,6 +7,7 @@ import moment from 'moment';
 import { getIkas, getRedirectUri } from '@/helpers/api-helpers';
 import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
+import { SubdomainHelpers } from '@/helpers/subdomain-helpers';
 import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
@@ -124,6 +125,28 @@ export async function GET(request: NextRequest) {
     // Store the token for future use
     await AuthTokenManager.put(token);
 
+    // Generate subdomain from store name (if creating new merchant)
+    const storeName = merchantResponse.data.getMerchant.storeName || `store-${merchantId.substring(0, 8)}`;
+
+    // Check if merchant already exists
+    const existingMerchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { subdomain: true },
+    });
+
+    let subdomain: string | undefined;
+
+    // Only generate subdomain if merchant is new (no existing subdomain)
+    if (!existingMerchant?.subdomain) {
+      try {
+        subdomain = await SubdomainHelpers.generateSubdomain(storeName);
+        console.log(`✨ Generated subdomain for ${storeName}: ${subdomain}`);
+      } catch (error) {
+        console.error('Failed to generate subdomain:', error);
+        // Continue without subdomain - can be generated later
+      }
+    }
+
     // Create or update Merchant record
     await prisma.merchant.upsert({
       where: { id: merchantId },
@@ -133,12 +156,15 @@ export async function GET(request: NextRequest) {
         email: merchantResponse.data.getMerchant.email || null,
         portalEnabled: true,
         updatedAt: new Date(),
+        // Don't update subdomain if already exists
       },
       create: {
         id: merchantId,
         authorizedAppId,
         storeName: merchantResponse.data.getMerchant.storeName || null,
         email: merchantResponse.data.getMerchant.email || null,
+        subdomain: subdomain || undefined, // Auto-generated subdomain
+        subdomainStatus: subdomain ? 'active' : 'pending',
         portalEnabled: true,
       },
     });

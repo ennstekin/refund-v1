@@ -6,12 +6,15 @@ import { ApiRequests } from '@/lib/api-requests';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import axios from 'axios';
 import { BackButton } from '@/components/BackButton';
+import { SubdomainSettings } from '@/components/SubdomainSettings';
 
 type MerchantSettings = {
   id: string;
   storeName: string | null;
   portalUrl: string | null;
   portalEnabled: boolean;
+  subdomain: string | null;
+  subdomainChangeCount: number;
 };
 
 export default function SettingsPage() {
@@ -161,6 +164,19 @@ export default function SettingsPage() {
             />
           </svg>
           <p className="text-sm text-green-800">Ayarlar başarıyla kaydedildi!</p>
+        </div>
+      )}
+
+      {/* Subdomain Settings */}
+      {token && settings && (
+        <div className="mb-6">
+          <SubdomainSettings
+            token={token}
+            subdomain={settings.subdomain}
+            subdomainChangeCount={settings.subdomainChangeCount || 0}
+            baseDomain={process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost'}
+            onUpdate={() => fetchSettings(token)}
+          />
         </div>
       )}
 
