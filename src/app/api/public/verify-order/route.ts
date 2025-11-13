@@ -315,14 +315,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Search for order in ikas using exact orderNumber match
+    // Search for order using lightweight query (faster performance)
     const ikasClient = getIkas(authToken);
 
     let orderResponse;
     try {
-      orderResponse = await ikasClient.queries.listOrder({
-        pagination: { limit: 1 },
+      // Use minimal field query for faster response
+      orderResponse = await ikasClient.queries.verifyOrder({
         orderNumber: { eq: orderNumber.trim() },
+        pagination: { limit: 1 },
       });
     } catch (error: any) {
       console.error('ikas API error:', error);

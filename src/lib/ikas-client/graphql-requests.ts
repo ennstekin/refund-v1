@@ -19,6 +19,26 @@ export const GET_AUTHORIZED_APP = gql`
   }
 `;
 
+// Lightweight query for quick order verification (portal use)
+export const VERIFY_ORDER = gql`
+  query verifyOrder($orderNumber: StringFilterInput, $pagination: PaginationInput) {
+    listOrder(orderNumber: $orderNumber, pagination: $pagination) {
+      data {
+        id
+        orderNumber
+        totalFinalPrice
+        currencySymbol
+        orderedAt
+        customer {
+          email
+          firstName
+          lastName
+        }
+      }
+    }
+  }
+`;
+
 export const LIST_ORDERS = gql`
   query listOrder($pagination: PaginationInput, $sort: String, $search: String, $orderNumber: StringFilterInput) {
     listOrder(pagination: $pagination, sort: $sort, search: $search, orderNumber: $orderNumber) {

@@ -122,6 +122,30 @@ export interface GetAuthorizedAppQuery {
   getAuthorizedApp: GetAuthorizedAppQueryData;
 }
 
+export type VerifyOrderQueryVariables = {
+  orderNumber?: StringFilterInput;
+  pagination?: PaginationInput;
+}
+
+export type VerifyOrderQueryData = {
+  data: Array<{
+  id: string;
+  orderNumber?: string;
+  totalFinalPrice: number;
+  currencySymbol?: string;
+  orderedAt?: number;
+  customer?: {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+};
+}>;
+}
+
+export interface VerifyOrderQuery {
+  listOrder: VerifyOrderQueryData;
+}
+
 export type ListOrderQueryVariables = {
   pagination?: PaginationInput;
   sort?: string;
@@ -418,6 +442,28 @@ export class GeneratedQueries {
   }
 `;
     return this.client.query<Partial<GetAuthorizedAppQuery>>({ query });
+  }
+
+  async verifyOrder(variables: VerifyOrderQueryVariables): Promise<APIResult<Partial<VerifyOrderQuery>>> {
+    const query = `
+  query verifyOrder($orderNumber: StringFilterInput, $pagination: PaginationInput) {
+    listOrder(orderNumber: $orderNumber, pagination: $pagination) {
+      data {
+        id
+        orderNumber
+        totalFinalPrice
+        currencySymbol
+        orderedAt
+        customer {
+          email
+          firstName
+          lastName
+        }
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<VerifyOrderQuery>>({ query, variables });
   }
 
   async listOrder(variables: ListOrderQueryVariables): Promise<APIResult<Partial<ListOrderQuery>>> {
