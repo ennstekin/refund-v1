@@ -1,20 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rateLimit, getClientIp, getRateLimitMessage } from '@/lib/rate-limit';
 
 /**
  * POST - Public endpoint to submit refund request from customer portal
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { orderId, orderNumber, merchantId, customerEmail, reason, reasonNote, images } = body;
+    // Rate limiting: 5 requests per minute per IP (strict for submissions)
+    const clientIp = getClientIp(request);
+    const rateLimitResult = rateLimit(clientIp, {
+      max: 5,
+      windowMs: 60 * 1000,
+    });
 
-    if (!orderId || !orderNumber || !merchantId || !customerEmail || !reason) {
+    if (!rateLimitResult.success) {
+      console.warn(`[SECURITY] Rate limit exceeded for IP: ${clientIp} on submit-refund`);
+      return NextResponse.json(
+        {
+          error: getRateLimitMessage(rateLimitResult),
+          success: false,
+        },
+        { status: 429 }
+      );
+    }
+
+    // Get subdomain from middleware header
+    const subdomain = request.headers.get('x-subdomain');
+
+    if (!subdomain) {
+      return NextResponse.json(
+        { error: 'Geçersiz portal adresi. Lütfen mağazanızın portal URL\'ini kullanın.', success: false },
+        { status: 400 }
+      );
+    }
+
+    // Get merchant by subdomain
+    const merchant = await prisma.merchant.findUnique({
+      where: {
+        subdomain: subdomain.toLowerCase(),
+      },
+    });
+
+    if (!merchant) {
+      return NextResponse.json(
+        { error: 'Mağaza bulunamadı', success: false },
+        { status: 404 }
+      );
+    }
+
+    // Validate merchant is active and portal is enabled
+    if (!merchant.portalEnabled || merchant.subdomainStatus !== 'active') {
+      return NextResponse.json(
+        { error: 'Bu mağaza için portal hizmeti aktif değil', success: false },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { orderId, orderNumber, customerEmail, reason, reasonNote, images } = body;
+
+    if (!orderId || !orderNumber || !customerEmail || !reason) {
       return NextResponse.json(
         { error: 'Gerekli alanlar eksik', success: false },
         { status: 400 }
       );
     }
+
+    // Use merchantId from database lookup (not from request body)
+    const merchantId = merchant.id;
 
     // Check if refund already exists
     const existing = await prisma.refundRequest.findUnique({

@@ -48,21 +48,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the merchant - use the FIRST merchant (single tenant for now)
-    // This bypasses subdomain lookup which may be causing delays
-    const merchant = await prisma.merchant.findFirst({
+    // Get subdomain from middleware header
+    const subdomain = request.headers.get('x-subdomain');
+
+    if (!subdomain) {
+      return NextResponse.json(
+        { error: 'Geçersiz portal adresi. Lütfen mağazanızın portal URL\'ini kullanın.' },
+        { status: 400, headers }
+      );
+    }
+
+    // Get merchant by subdomain
+    const merchant = await prisma.merchant.findUnique({
       where: {
-        portalEnabled: true,
-      },
-      orderBy: {
-        createdAt: 'desc', // Get the latest merchant
+        subdomain: subdomain.toLowerCase(),
       },
     });
 
     if (!merchant) {
       return NextResponse.json(
         { error: 'Mağaza bulunamadı' },
-        { status: 404 }
+        { status: 404, headers }
+      );
+    }
+
+    // Check if portal is enabled for this merchant
+    if (!merchant.portalEnabled) {
+      return NextResponse.json(
+        { error: 'Bu mağaza için portal hizmeti aktif değil' },
+        { status: 403, headers }
+      );
+    }
+
+    // Check if subdomain is active
+    if (merchant.subdomainStatus !== 'active') {
+      return NextResponse.json(
+        { error: 'Portal adresi henüz aktif değil' },
+        { status: 403, headers }
       );
     }
     const authToken = await AuthTokenManager.get(merchant.authorizedAppId);

@@ -28,6 +28,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get subdomain from middleware header
+    const subdomain = request.headers.get('x-subdomain');
+
+    if (!subdomain) {
+      return NextResponse.json(
+        { error: 'Geçersiz portal adresi. Lütfen mağazanızın portal URL\'ini kullanın.', success: false },
+        { status: 400 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const refundId = searchParams.get('refundId');
 
@@ -38,9 +48,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get refund request
-    const refund = await prisma.refundRequest.findUnique({
-      where: { id: refundId },
+    // Get merchant by subdomain first
+    const merchant = await prisma.merchant.findUnique({
+      where: {
+        subdomain: subdomain.toLowerCase(),
+      },
+    });
+
+    if (!merchant) {
+      return NextResponse.json(
+        { error: 'Mağaza bulunamadı', success: false },
+        { status: 404 }
+      );
+    }
+
+    // Validate merchant is active and portal is enabled
+    if (!merchant.portalEnabled || merchant.subdomainStatus !== 'active') {
+      return NextResponse.json(
+        { error: 'Bu mağaza için portal hizmeti aktif değil', success: false },
+        { status: 403 }
+      );
+    }
+
+    // Get refund request (ensure it belongs to this merchant)
+    const refund = await prisma.refundRequest.findFirst({
+      where: {
+        id: refundId,
+        merchantId: merchant.id, // Security: ensure refund belongs to this merchant
+      },
       include: {
         notes: {
           orderBy: {
@@ -57,19 +92,7 @@ export async function GET(request: NextRequest) {
 
     if (!refund) {
       return NextResponse.json(
-        { error: 'İade talebi bulunamadı', success: false },
-        { status: 404 }
-      );
-    }
-
-    // Get merchant and auth token to fetch order details
-    const merchant = await prisma.merchant.findUnique({
-      where: { id: refund.merchantId },
-    });
-
-    if (!merchant) {
-      return NextResponse.json(
-        { error: 'Mağaza bulunamadı', success: false },
+        { error: 'İade talebi bulunamadı veya bu mağazaya ait değil', success: false },
         { status: 404 }
       );
     }
