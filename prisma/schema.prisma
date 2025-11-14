@@ -44,6 +44,10 @@ model RefundRequest {
 
   notes           RefundNote[]
   timeline        RefundTimeline[]
+
+  @@index([merchantId]) // Performance: Fast lookup by merchant
+  @@index([merchantId, status]) // Performance: Filter by merchant and status
+  @@index([merchantId, createdAt]) // Performance: Order by date per merchant
 }
 
 model RefundNote {

@@ -9,17 +9,26 @@ interface RateLimitEntry {
 }
 
 // In-memory store (resets on cold start, but good enough for basic protection)
+// NOTE: In Vercel serverless, each function instance has its own memory
+// This means rate limiting is per-instance, not global
+// For production, consider using Redis/Upstash for distributed rate limiting
 const limitStore = new Map<string, RateLimitEntry>();
 
 // Clean up old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of limitStore.entries()) {
-    if (now > entry.resetTime) {
-      limitStore.delete(key);
+// IMPORTANT: setInterval may not work reliably in serverless environments
+// But we keep it for cleaning up memory in long-running instances
+let cleanupInterval: NodeJS.Timeout | null = null;
+
+if (!cleanupInterval) {
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of limitStore.entries()) {
+      if (now > entry.resetTime) {
+        limitStore.delete(key);
+      }
     }
-  }
-}, 5 * 60 * 1000);
+  }, 5 * 60 * 1000);
+}
 
 export interface RateLimitConfig {
   /**
