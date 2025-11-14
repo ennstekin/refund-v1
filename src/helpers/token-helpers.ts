@@ -39,39 +39,50 @@ export class TokenHelpers {
     // Only proceed if running inside an iFrame (within ikas dashboard)
     if (window.self !== window.top) {
       try {
+        console.log('[TokenHelpers] Running in iframe, attempting to get token...');
+
         // Get the authorized app ID to create a unique storage key
         const authorizedAppId = (await AppBridgeHelper.getAuthorizedAppId()) || null;
-        
+        console.log('[TokenHelpers] Authorized App ID:', authorizedAppId);
+
         // Attempt to retrieve cached token from session storage
         let token = sessionStorage.getItem(`${TOKEN_KEY}-${authorizedAppId}`);
-        
+
         if (token) {
+          console.log('[TokenHelpers] Found cached token');
           // Decode JWT payload to check expiration (JWT structure: header.payload.signature)
           const tokenData = JSON.parse(atob(token.split('.')[1]));
-          
+
           // Return cached token if it hasn't expired yet
           if (new Date().getTime() < tokenData.exp * 1000) {
+            console.log('[TokenHelpers] Cached token is valid');
             return token;
           }
-          
+
+          console.log('[TokenHelpers] Cached token expired');
           // Token has expired, remove from cache
           sessionStorage.removeItem(`${TOKEN_KEY}-${authorizedAppId}`);
         }
-        
+
         // No valid cached token found, request new token from AppBridge
+        console.log('[TokenHelpers] Requesting new token from AppBridge...');
         token = (await AppBridgeHelper.getNewToken()) || null;
-        
+
         if (token) {
+          console.log('[TokenHelpers] New token received, caching...');
           // Cache the new token for future use
           sessionStorage.setItem(`${TOKEN_KEY}-${authorizedAppId}`, token);
           return token;
         }
-        
+
+        console.log('[TokenHelpers] No token received from AppBridge');
       } catch (error) {
-        console.error('Error retrieving token from AppBridge:', error);
+        console.error('[TokenHelpers] Error retrieving token from AppBridge:', error);
       }
+    } else {
+      console.log('[TokenHelpers] Not running in iframe (window.self === window.top)');
     }
-    
+
     // Return null if not in iFrame context or token retrieval failed
     return null;
   };

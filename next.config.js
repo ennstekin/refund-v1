@@ -11,8 +11,35 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Apply security headers to all routes
-        source: '/:path*',
+        // Apply security headers to admin/dashboard routes (iframe context)
+        // Allow iframe embedding from ikas domains
+        source: '/(dashboard|authorize-store|callback|refunds|settings)/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://*.myikas.com https://*.ikas.com"
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          }
+        ],
+      },
+      {
+        // Apply stricter security headers to portal routes (not in iframe)
+        source: '/portal/:path*',
         headers: [
           {
             key: 'X-DNS-Prefetch-Control',
@@ -24,7 +51,7 @@ const nextConfig = {
           },
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            value: 'DENY'
           },
           {
             key: 'X-Content-Type-Options',
@@ -41,6 +68,20 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()'
+          }
+        ],
+      },
+      {
+        // Root page (entry point for ikas app)
+        source: '/',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://*.myikas.com https://*.ikas.com"
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
           }
         ],
       },
