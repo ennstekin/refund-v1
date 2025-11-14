@@ -156,7 +156,11 @@ export async function GET(request: NextRequest) {
         email: merchantResponse.data.getMerchant.email || null,
         portalEnabled: true,
         updatedAt: new Date(),
-        // Don't update subdomain if already exists
+        // Update subdomain if it was just generated (merchant existed but had no subdomain)
+        ...(subdomain && {
+          subdomain,
+          subdomainStatus: 'active',
+        }),
       },
       create: {
         id: merchantId,
